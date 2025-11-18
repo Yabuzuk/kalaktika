@@ -150,6 +150,13 @@ function setupEventListeners() {
     // Кнопка обновления
     document.getElementById('refreshBtn').addEventListener('click', loadOrders);
     
+    // Кнопка теста уведомлений
+    document.getElementById('testNotificationBtn').addEventListener('click', function() {
+        playNotificationSound();
+        showBrowserNotification('Тестовое уведомление', 'Проверка работы уведомлений');
+        showDriverNotification('Тест уведомлений пройден!', 'info');
+    });
+    
     // Фильтры
     document.querySelectorAll('.filter-btn').forEach(btn => {
         btn.addEventListener('click', function() {
@@ -261,28 +268,20 @@ function createOrderCard(order) {
             
             <div class="order-info">
                 <div class="info-item">
-                    <div class="info-label">Услуга</div>
+                    <div class="info-label">Услуга:</div>
                     <div class="info-value">${serviceName}</div>
                 </div>
                 <div class="info-item">
-                    <div class="info-label">Количество</div>
+                    <div class="info-label">Кол-во:</div>
                     <div class="info-value">${order.quantity} ${order.service_type === 'water' ? 'куб.м' : 'выезд'}</div>
                 </div>
                 <div class="info-item">
-                    <div class="info-label">Адрес</div>
+                    <div class="info-label">Адрес:</div>
                     <div class="info-value">${order.address}</div>
                 </div>
                 <div class="info-item">
-                    <div class="info-label">Время</div>
+                    <div class="info-label">Время:</div>
                     <div class="info-value">${formatDateTime(order.delivery_date, order.delivery_time)}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Клиент</div>
-                    <div class="info-value">${order.user_name}</div>
-                </div>
-                <div class="info-item">
-                    <div class="info-label">Стоимость</div>
-                    <div class="info-value">${order.price.toLocaleString()} ₽</div>
                 </div>
             </div>
             
@@ -710,49 +709,76 @@ function showReminder(message, type = 'info') {
 }
 
 // Функции для уведомлений
-function requestNotificationPermission() {
-    if ('Notification' in window && Notification.permission === 'default') {
-        Notification.requestPermission();
+async function requestNotificationPermission() {
+    if ('Notification' in window) {
+        if (Notification.permission === 'default') {
+            const permission = await Notification.requestPermission();
+            console.log('Разрешение на уведомления:', permission);
+        }
+        console.log('Текущий статус уведомлений:', Notification.permission);
+    } else {
+        console.log('Браузер не поддерживает уведомления');
     }
 }
 
 function playNotificationSound() {
-    // Создаем звуковое уведомление
-    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
-    
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
-    
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
-    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-    
-    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
-    
-    oscillator.start(audioContext.currentTime);
-    oscillator.stop(audioContext.currentTime + 0.3);
+    try {
+        // Простой звук через Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        
+        oscillator.frequency.value = 800;
+        oscillator.type = 'sine';
+        
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.5);
+        
+        console.log('Звуковое уведомление воспроизведено');
+    } catch (error) {
+        console.error('Ошибка воспроизведения звука:', error);
+    }
 }
 
 function showBrowserNotification(title, body) {
-    if ('Notification' in window && Notification.permission === 'granted') {
-        const notification = new Notification(title, {
-            body: body,
-            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjdlZWEiLz4KPHN2ZyB4PSIxNiIgeT0iMTYiIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0yMCA4aC0zVjRIMy4yNUwyIDVsLjkgMUgzdjEyYzAgMS4xLjkgMiAyIDJoMTRjMS4xIDAgMi0uOSAyLTJWOHptLTcgN2MtMS42NiAwLTMtMS4zNC0zLTNzMS4zNC0zIDMtMyAzIDEuMzQgMyAzLTEuMzQgMy0zIDN6Ii8+Cjwvc3ZnPgo8L3N2Zz4K',
-            badge: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjdlZWEiLz4KPHN2ZyB4PSIxNiIgeT0iMTYiIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0yMCA4aC0zVjRIMy4yNUwyIDVsLjkgMUgzdjEyYzAgMS4xLjkgMiAyIDJoMTRjMS4xIDAgMi0uOSAyLTJWOHptLTcgN2MtMS42NiAwLTMtMS4zNC0zLTNzMS4zNC0zIDMtMyAzIDEuMzQgMyAzLTEuMzQgMy0zIDN6Ii8+Cjwvc3ZnPgo8L3N2Zz4K'
-        });
-        
-        // Автозакрытие через 5 секунд
-        setTimeout(() => {
-            notification.close();
-        }, 5000);
-        
-        // Клик по уведомлению - фокус на окно
-        notification.onclick = function() {
-            window.focus();
-            notification.close();
-        };
+    console.log('Попытка показать уведомление:', title, body);
+    
+    if (!('Notification' in window)) {
+        console.log('Браузер не поддерживает уведомления');
+        return;
+    }
+    
+    if (Notification.permission === 'granted') {
+        try {
+            const notification = new Notification(title, {
+                body: body,
+                icon: '🚛',
+                requireInteraction: true
+            });
+            
+            console.log('Уведомление создано');
+            
+            // Автозакрытие через 8 секунд
+            setTimeout(() => {
+                notification.close();
+            }, 8000);
+            
+            // Клик по уведомлению
+            notification.onclick = function() {
+                window.focus();
+                notification.close();
+            };
+            
+        } catch (error) {
+            console.error('Ошибка создания уведомления:', error);
+        }
+    } else {
+        console.log('Нет разрешения на уведомления. Текущий статус:', Notification.permission);
     }
 }

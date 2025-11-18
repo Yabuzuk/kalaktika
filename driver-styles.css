@@ -264,10 +264,10 @@ header h1 {
 }
 
 .order-card {
-    border: 2px solid #e1e8ed;
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 15px;
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 8px;
     cursor: pointer;
     transition: all 0.3s;
 }
@@ -281,7 +281,7 @@ header h1 {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 15px;
+    margin-bottom: 8px;
 }
 
 .order-id {
@@ -319,24 +319,26 @@ header h1 {
 .order-info {
     display: grid;
     grid-template-columns: 1fr 1fr;
-    gap: 15px;
-    margin-bottom: 15px;
+    gap: 8px;
+    margin-bottom: 10px;
 }
 
 .info-item {
     display: flex;
-    flex-direction: column;
+    align-items: center;
+    gap: 4px;
 }
 
 .info-label {
-    font-size: 12px;
+    font-size: 11px;
     color: #666;
-    margin-bottom: 4px;
+    min-width: 50px;
 }
 
 .info-value {
-    font-weight: 600;
+    font-weight: 500;
     color: #333;
+    font-size: 13px;
 }
 
 .order-actions {
