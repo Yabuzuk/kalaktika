@@ -22,6 +22,15 @@ document.addEventListener('DOMContentLoaded', async function() {
     
     // Инициализация календаря
     initCalendar();
+    
+    // Проверяем доступность Яндекс.Карт
+    setTimeout(() => {
+        if (typeof ymaps === 'undefined') {
+            console.warn('Яндекс.Карты API не загрузился');
+        } else {
+            console.log('Яндекс.Карты API успешно загружен');
+        }
+    }, 2000);
 });
 
 function subscribeToDriverOrderUpdates() {
@@ -809,8 +818,11 @@ function showOrderMap(orderId) {
 }
 
 function initOrderMap(order) {
+    console.log('Инициализация карты для заказа:', order);
+    
     if (typeof ymaps === 'undefined') {
-        alert('Карты недоступны. Проверьте интернет-соединение.');
+        console.error('ymaps не определен');
+        document.getElementById('orderMap').innerHTML = '<div style="padding: 50px; text-align: center; color: #666;"><h3>Карты недоступны</h3><p>Проверьте интернет-соединение и перезагрузите страницу</p></div>';
         return;
     }
     
