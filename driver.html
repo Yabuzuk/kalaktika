@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CRM Водителя - Водовозка и Септик</title>
+    <link rel="stylesheet" href="driver-styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚛 CRM Водителя</h1>
+            <div class="driver-info">
+                <span id="driverName">Водитель</span>
+                <button id="logoutBtn">Выйти</button>
+            </div>
+        </header>
+
+        <div class="stats-panel">
+            <div class="stat-card">
+                <h3>Новые заказы</h3>
+                <span id="newOrdersCount">0</span>
+            </div>
+            <div class="stat-card">
+                <h3>В работе</h3>
+                <span id="activeOrdersCount">0</span>
+            </div>
+            <div class="stat-card">
+                <h3>Выполнено сегодня</h3>
+                <span id="completedTodayCount">0</span>
+            </div>
+            <div class="stat-card">
+                <h3>Заработок</h3>
+                <span id="todayEarnings">0 ₽</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="calendar-section">
+                <div class="section-header">
+                    <h2>📅 Календарь заказов</h2>
+                    <div class="calendar-nav">
+                        <button id="prevMonth">‹</button>
+                        <span id="currentMonth"></span>
+                        <button id="nextMonth">›</button>
+                    </div>
+                </div>
+                <div id="calendar" class="calendar"></div>
+            </div>
+
+            <div class="orders-section">
+                <div class="section-header">
+                    <h2>Лента заказов</h2>
+                    <button id="refreshBtn">🔄 Обновить</button>
+                </div>
+            
+            <div class="filters">
+                <button class="filter-btn active" data-status="all">Все</button>
+                <button class="filter-btn" data-status="pending">Новые</button>
+                <button class="filter-btn" data-status="confirmed">Принятые</button>
+                <button class="filter-btn" data-status="in_progress">В работе</button>
+                <button class="filter-btn" data-status="completed">Выполненные</button>
+            </div>
+
+            <div id="ordersList" class="orders-list">
+                <!-- Заказы будут загружаться динамически -->
+            </div>
+        </div>
+    </div>
+    </div>
+
+    <!-- Модальное окно деталей заказа -->
+    <div id="orderModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <div id="orderDetails"></div>
+        </div>
+    </div>
+
+    <!-- Модальное окно заказов дня -->
+    <div id="dayOrdersModal" class="modal">
+        <div class="modal-content day-modal">
+            <span class="close-day">&times;</span>
+            <div id="dayOrdersContent"></div>
+        </div>
+    </div>
+
+    <script src="driver-script.js"></script>
+</body>
+</html>

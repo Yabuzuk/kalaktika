@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Водовозка и Септик - Сервис доставки</title>
+    <link rel="stylesheet" href="styles.css">
+    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚛 Водовозка и Септик</h1>
+            <div class="user-info">
+                <span id="userName">Добро пожаловать!</span>
+                <button id="logoutBtn">Выйти</button>
+            </div>
+        </header>
+
+        <main class="order-form-single">
+            <div class="form-section-full">
+                <h2>Новый заказ</h2>
+                
+                <div class="service-type">
+                    <label>Выберите услугу:</label>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="service" value="water" checked>
+                            <span>💧 Доставка воды</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="service" value="septic">
+                            <span>🚽 Откачка септика</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="address-section">
+                    <label for="address">Адрес доставки:</label>
+                    <div class="address-input-container">
+                        <input type="text" id="address" placeholder="Введите адрес или выберите на карте">
+                        <div id="addressSuggestions" class="suggestions"></div>
+                    </div>
+                    <button id="selectOnMap">📍 Выбрать на карте</button>
+                </div>
+
+                <div class="datetime-section">
+                    <div class="input-group">
+                        <label for="date">Дата:</label>
+                        <input type="date" id="date" required>
+                    </div>
+                    <div class="input-group">
+                        <label for="time">Время:</label>
+                        <select id="time" required>
+                            <option value="">Выберите время</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="quantity-section" id="quantitySection">
+                    <label for="quantity">Количество кубометров:</label>
+                    <input type="number" id="quantity" min="1" max="20" value="1">
+                </div>
+
+                <div class="price-section">
+                    <div class="price-display">
+                        <span>Стоимость: </span>
+                        <span id="totalPrice">1300 ₽</span>
+                    </div>
+                </div>
+
+                <button id="orderBtn" class="order-button">Заказать</button>
+            </div>
+        </main>
+    </div>
+
+    <div id="mapModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>Выберите адрес на карте</h3>
+            <div id="modalMap"></div>
+            <button id="confirmAddress">Подтвердить адрес</button>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
