@@ -468,10 +468,12 @@ header h1 {
     
     .order-info {
         grid-template-columns: 1fr;
+        gap: 4px;
     }
     
     .order-actions {
         flex-direction: column;
+        gap: 6px;
     }
     
     .filters {
@@ -480,5 +482,27 @@ header h1 {
     
     .calendar-day {
         min-height: 60px;
+    }
+    
+    .order-card {
+        padding: 10px;
+        margin-bottom: 6px;
+    }
+    
+    .order-header {
+        margin-bottom: 6px;
+    }
+    
+    .info-item {
+        gap: 2px;
+    }
+    
+    .info-label {
+        font-size: 10px;
+        min-width: 45px;
+    }
+    
+    .info-value {
+        font-size: 12px;
     }
 }
