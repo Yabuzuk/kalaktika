@@ -16,45 +16,347 @@ body {
     padding: 20px;
 }
 
-header {
+/* Бургер меню */
+.burger-menu-btn {
+    position: fixed;
+    top: 20px;
+    left: 20px;
+    width: 40px;
+    height: 40px;
     background: white;
-    border-radius: 15px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    cursor: pointer;
+    z-index: 1001;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 4px;
+    transition: all 0.3s;
+}
+
+.burger-menu-btn span {
+    width: 20px;
+    height: 2px;
+    background: #333;
+    border-radius: 1px;
+    transition: all 0.3s;
+}
+
+.burger-menu-btn:hover {
+    background: #667eea;
+}
+
+.burger-menu-btn:hover span {
+    background: white;
+}
+
+/* Боковое меню */
+.side-menu {
+    position: fixed;
+    top: 0;
+    left: -300px;
+    width: 300px;
+    height: 100vh;
+    background: white;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.1);
+    z-index: 1002;
+    transition: left 0.3s ease;
+    overflow-y: auto;
+}
+
+.side-menu.open {
+    left: 0;
+}
+
+.menu-header {
     padding: 20px;
-    margin-bottom: 20px;
+    border-bottom: 1px solid #e1e8ed;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
 }
 
-header h1 {
+.menu-header h3 {
     color: #333;
-    font-size: 24px;
+    margin: 0;
 }
 
-.user-info {
+.close-menu {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: #666;
+}
+
+.menu-content {
+    padding: 20px;
+}
+
+.user-profile {
+    text-align: center;
+    padding: 20px 0;
+    border-bottom: 1px solid #e1e8ed;
+    margin-bottom: 20px;
+}
+
+.avatar {
+    width: 60px;
+    height: 60px;
+    background: #667eea;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    margin: 0 auto 10px;
+    color: white;
+}
+
+.user-name {
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+.user-phone {
+    color: #666;
+    font-size: 14px;
+}
+
+.menu-nav {
+    display: flex;
+    flex-direction: column;
+}
+
+.menu-item {
     display: flex;
     align-items: center;
     gap: 15px;
+    padding: 15px 0;
+    text-decoration: none;
+    color: #333;
+    border-bottom: 1px solid #f0f0f0;
+    transition: all 0.3s;
 }
 
-#logoutBtn {
-    background: #ff4757;
+.menu-item:hover {
+    color: #667eea;
+    background: #f8f9ff;
+    margin: 0 -20px;
+    padding-left: 20px;
+    padding-right: 20px;
+}
+
+.menu-item .icon {
+    font-size: 18px;
+    width: 20px;
+}
+
+.menu-item.become-driver {
+    color: #28a745;
+    background: #f8fff9;
+    margin: 10px -20px;
+    padding: 15px 20px;
+    border-radius: 8px;
+    border: 2px solid #28a745;
+    font-weight: 600;
+}
+
+.menu-item.become-driver:hover {
+    background: #28a745;
+    color: white;
+}
+
+.menu-item.logout {
+    color: #ff4757;
+    margin-top: 20px;
+    border-top: 1px solid #e1e8ed;
+    border-bottom: none;
+    padding-top: 20px;
+}
+
+.menu-item.logout:hover {
+    background: #fff5f5;
+}
+
+.overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    display: none;
+}
+
+.overlay.show {
+    display: block;
+}
+
+/* Модальные окна */
+.history-modal {
+    max-width: 600px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #555;
+}
+
+.form-group input,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 2px solid #e1e8ed;
+    border-radius: 6px;
+    font-size: 14px;
+    background: white;
+    cursor: pointer;
+}
+
+.form-group select {
+    appearance: none;
+    background-image: url('data:image/svg+xml;charset=US-ASCII,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 4 5"><path fill="%23666" d="M2 0L0 2h4zm0 5L0 3h4z"/></svg>');
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    background-size: 12px;
+    padding-right: 40px;
+}
+
+.btn-save {
+    background: #667eea;
     color: white;
     border: none;
-    padding: 8px 16px;
-    border-radius: 8px;
+    padding: 12px 24px;
+    border-radius: 6px;
     cursor: pointer;
-    transition: background 0.3s;
+    font-size: 14px;
+    width: 100%;
 }
 
-#logoutBtn:hover {
-    background: #ff3742;
+.order-history-item {
+    border: 1px solid #e1e8ed;
+    border-radius: 8px;
+    padding: 15px;
+    margin-bottom: 10px;
+}
+
+.order-history-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.order-history-title {
+    font-weight: 600;
+    color: #333;
+}
+
+.order-history-date {
+    color: #666;
+    font-size: 12px;
+}
+
+.order-history-details {
+    color: #666;
+    font-size: 14px;
+    line-height: 1.4;
+}
+
+/* Табы водителя */
+.driver-tabs {
+    display: flex;
+    margin-bottom: 20px;
+    border-bottom: 2px solid #e1e8ed;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 600;
+    color: #666;
+    border-bottom: 2px solid transparent;
+    transition: all 0.3s;
+}
+
+.tab-btn.active {
+    color: #667eea;
+    border-bottom-color: #667eea;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
 }
 
 .order-form-single {
     max-width: 600px;
     margin: 0 auto;
+}
+
+.current-order-section {
+    background: #fff3cd;
+    border: 2px solid #ffc107;
+    border-radius: 15px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.current-order-section h3 {
+    color: #856404;
+    margin-bottom: 15px;
+}
+
+.current-order-details {
+    background: white;
+    border-radius: 10px;
+    padding: 15px;
+    border: 1px solid #ffc107;
+}
+
+.status-pending {
+    color: #856404;
+    font-weight: bold;
+}
+
+.status-confirmed {
+    color: #155724;
+    font-weight: bold;
+}
+
+.status-in_progress {
+    color: #004085;
+    font-weight: bold;
+}
+
+.status-completed {
+    color: #0c5460;
+    font-weight: bold;
+}
+
+.status-cancelled {
+    color: #721c24;
+    font-weight: bold;
 }
 
 .form-section-full {
@@ -218,6 +520,11 @@ header h1 {
     background-position: right 12px center;
     background-size: 12px;
     padding-right: 40px;
+}
+
+.input-group select option:disabled {
+    color: #999;
+    font-style: italic;
 }
 
 .quantity-section {

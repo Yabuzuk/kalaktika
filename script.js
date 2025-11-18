@@ -18,12 +18,74 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 function initializeApp() {
-    // Проверяем авторизацию (заглушка)
+    // Проверяем авторизацию
     const userName = localStorage.getItem('userName') || 'Пользователь';
-    document.getElementById('userName').textContent = `Привет, ${userName}!`;
+    const userPhone = localStorage.getItem('userPhone') || '+7 (999) 123-45-67';
+    
+    // Обновляем данные в меню
+    document.getElementById('menuUserName').textContent = userName;
+    document.getElementById('menuUserPhone').textContent = userPhone;
+    
+    // Загружаем текущий заказ
+    loadCurrentOrder();
     
     // Инициализируем Яндекс карты
     ymaps.ready(initMaps);
+}
+
+async function loadCurrentOrder() {
+    const userPhone = localStorage.getItem('userPhone');
+    
+    try {
+        // Ищем текущий невыполненный заказ
+        const { data: currentOrder, error } = await supabaseClient
+            .from('orders')
+            .select('*')
+            .eq('user_phone', userPhone)
+            .in('status', ['pending', 'confirmed', 'in_progress'])
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (error && error.code !== 'PGRST116') {
+            throw error;
+        }
+
+        if (currentOrder) {
+            showCurrentOrder(currentOrder);
+        } else {
+            hideCurrentOrder();
+        }
+
+    } catch (error) {
+        console.error('Ошибка загрузки текущего заказа:', error);
+        hideCurrentOrder();
+    }
+}
+
+function showCurrentOrder(order) {
+    const serviceIcon = order.service_type === 'water' ? '💧' : '🚽';
+    const serviceName = order.service_type === 'water' ? 'Доставка воды' : 'Откачка септика';
+    const statusText = getOrderStatusText(order.status);
+    
+    const orderHtml = `
+        <div class="current-order-details">
+            <div><strong>${serviceIcon} Заказ #${order.id}</strong></div>
+            <div><strong>Услуга:</strong> ${serviceName}</div>
+            <div><strong>Адрес:</strong> ${order.address}</div>
+            <div><strong>Дата и время:</strong> ${order.delivery_date} в ${order.delivery_time}</div>
+            <div><strong>Количество:</strong> ${order.quantity} ${order.service_type === 'water' ? 'куб.м' : 'выезд'}</div>
+            <div><strong>Стоимость:</strong> ${order.price.toLocaleString()} ₽</div>
+            <div><strong>Статус:</strong> <span class="status-${order.status}">${statusText}</span></div>
+        </div>
+    `;
+    
+    document.getElementById('currentOrderDetails').innerHTML = orderHtml;
+    document.getElementById('currentOrderSection').style.display = 'block';
+}
+
+function hideCurrentOrder() {
+    document.getElementById('currentOrderSection').style.display = 'none';
 }
 
 function initMaps() {
@@ -59,18 +121,46 @@ function setupEventListeners() {
     // Кнопка выбора на карте
     document.getElementById('selectOnMap').addEventListener('click', openMapModal);
 
-    // Модальное окно
+    // Модальное окно карты
     document.querySelector('.close').addEventListener('click', closeMapModal);
     document.getElementById('confirmAddress').addEventListener('click', confirmAddress);
 
     // Кнопка заказа
     document.getElementById('orderBtn').addEventListener('click', createOrder);
 
-    // Кнопка выхода
+    // Бургер меню
+    document.getElementById('burgerBtn').addEventListener('click', openSideMenu);
+    document.getElementById('closeMenu').addEventListener('click', closeSideMenu);
+    document.getElementById('overlay').addEventListener('click', closeSideMenu);
+    
+    // Меню пункты
+    document.getElementById('profileBtn').addEventListener('click', openProfileModal);
+    document.getElementById('historyBtn').addEventListener('click', openHistoryModal);
+    document.getElementById('becomeDriverBtn').addEventListener('click', openDriverModal);
     document.getElementById('logoutBtn').addEventListener('click', logout);
+    
+    // Модальные окна
+    document.querySelectorAll('.modal .close').forEach(btn => {
+        btn.addEventListener('click', closeModals);
+    });
+    
+    document.getElementById('profileForm').addEventListener('submit', saveProfile);
+    document.getElementById('driverLoginForm').addEventListener('submit', loginDriver);
+    document.getElementById('driverRegisterForm').addEventListener('submit', registerDriver);
+    
+    // Табы водителя
+    document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const tabName = this.dataset.tab;
+            switchDriverTab(tabName);
+        });
+    });
 
     // Поиск адреса при вводе
     document.getElementById('address').addEventListener('input', debounce(showAddressSuggestions, 300));
+    
+    // Обновление временных слотов при смене даты
+    document.getElementById('date').addEventListener('change', generateTimeSlots);
     
     // Скрываем подсказки при клике вне поля
     document.addEventListener('click', function(e) {
@@ -116,13 +206,20 @@ function setMinDate() {
     dateInput.min = tomorrow.toISOString().split('T')[0];
     dateInput.value = tomorrow.toISOString().split('T')[0];
     
-    // Генерируем временные интервалы
-    generateTimeSlots();
+    // Генерируем временные интервалы для завтрашнего дня
+    setTimeout(generateTimeSlots, 100);
 }
 
-function generateTimeSlots() {
+async function generateTimeSlots() {
     const timeSelect = document.getElementById('time');
+    const selectedDate = document.getElementById('date').value;
+    
     timeSelect.innerHTML = '<option value="">Выберите время</option>';
+    
+    if (!selectedDate) return;
+    
+    // Получаем занятые слоты на выбранную дату
+    const occupiedSlots = await getOccupiedTimeSlots(selectedDate);
     
     // Генерируем слоты с 8:00 до 20:00 каждые 30 минут
     for (let hour = 8; hour <= 20; hour++) {
@@ -130,11 +227,43 @@ function generateTimeSlots() {
             if (hour === 20 && minute > 0) break; // Последний слот 20:00
             
             const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-            const option = document.createElement('option');
-            option.value = timeString;
-            option.textContent = timeString;
-            timeSelect.appendChild(option);
+            
+            // Проверяем, не занят ли этот слот
+            if (!occupiedSlots.includes(timeString)) {
+                const option = document.createElement('option');
+                option.value = timeString;
+                option.textContent = timeString;
+                timeSelect.appendChild(option);
+            }
         }
+    }
+    
+    if (timeSelect.children.length === 1) {
+        const option = document.createElement('option');
+        option.value = '';
+        option.textContent = 'На эту дату все время занято';
+        option.disabled = true;
+        timeSelect.appendChild(option);
+    }
+}
+
+async function getOccupiedTimeSlots(date) {
+    try {
+        // Получаем все заказы на выбранную дату
+        const { data: orders, error } = await supabaseClient
+            .from('orders')
+            .select('delivery_time')
+            .eq('delivery_date', date)
+            .in('status', ['pending', 'confirmed', 'in_progress']);
+
+        if (error) throw error;
+
+        // Возвращаем массив занятых временных слотов
+        return orders.map(order => order.delivery_time.slice(0, 5));
+        
+    } catch (error) {
+        console.error('Ошибка получения занятых слотов:', error);
+        return [];
     }
 }
 
@@ -289,6 +418,9 @@ async function createOrder() {
     try {
         await saveOrder(order);
         showOrderConfirmation(order);
+        
+        // Обновляем текущий заказ
+        setTimeout(loadCurrentOrder, 1000);
     } catch (error) {
         console.error('Ошибка создания заказа:', error);
     }
@@ -356,8 +488,258 @@ function resetForm() {
     setMinDate();
 }
 
+// Функции меню
+function openSideMenu() {
+    document.getElementById('sideMenu').classList.add('open');
+    document.getElementById('overlay').classList.add('show');
+}
+
+function closeSideMenu() {
+    document.getElementById('sideMenu').classList.remove('open');
+    document.getElementById('overlay').classList.remove('show');
+}
+
+function openProfileModal() {
+    closeSideMenu();
+    const userName = localStorage.getItem('userName') || '';
+    const userPhone = localStorage.getItem('userPhone') || '';
+    
+    document.getElementById('profileName').value = userName;
+    document.getElementById('profilePhone').value = userPhone;
+    document.getElementById('profileModal').style.display = 'block';
+}
+
+function openHistoryModal() {
+    closeSideMenu();
+    loadOrderHistory();
+    document.getElementById('historyModal').style.display = 'block';
+}
+
+function openDriverModal() {
+    closeSideMenu();
+    // Предзаполняем телефон из профиля
+    const userPhone = localStorage.getItem('userPhone') || '';
+    document.getElementById('loginDriverPhone').value = userPhone;
+    document.getElementById('driverPhone').value = userPhone;
+    
+    // По умолчанию открываем вкладку входа
+    switchDriverTab('login');
+    document.getElementById('driverModal').style.display = 'block';
+}
+
+function switchDriverTab(tabName) {
+    // Убираем активные классы
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    // Добавляем активные классы
+    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+    document.getElementById(`driver${tabName.charAt(0).toUpperCase() + tabName.slice(1)}Tab`).classList.add('active');
+}
+
+function closeModals() {
+    document.querySelectorAll('.modal').forEach(modal => {
+        modal.style.display = 'none';
+    });
+}
+
+function saveProfile(e) {
+    e.preventDefault();
+    const name = document.getElementById('profileName').value;
+    const phone = document.getElementById('profilePhone').value;
+    
+    localStorage.setItem('userName', name);
+    localStorage.setItem('userPhone', phone);
+    
+    // Обновляем данные в меню
+    document.getElementById('menuUserName').textContent = name;
+    document.getElementById('menuUserPhone').textContent = phone;
+    
+    closeModals();
+    alert('Профиль обновлен!');
+}
+
+async function loadOrderHistory() {
+    const userPhone = localStorage.getItem('userPhone');
+    
+    try {
+        // Загружаем заказы из Supabase
+        const { data: orders, error } = await supabaseClient
+            .from('orders')
+            .select('*')
+            .eq('user_phone', userPhone)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        
+        const userOrders = orders || [];
+    
+    let historyHtml = '';
+    
+    if (userOrders.length === 0) {
+        historyHtml = '<p style="text-align: center; color: #666;">У вас пока нет заказов</p>';
+    } else {
+        userOrders.forEach(order => {
+            const serviceIcon = order.service_type === 'water' ? '💧' : '🚽';
+            const serviceName = order.service_type === 'water' ? 'Доставка воды' : 'Откачка септика';
+            const orderDate = new Date(order.created_at).toLocaleDateString('ru-RU');
+            const statusText = getOrderStatusText(order.status);
+            
+            historyHtml += `
+                <div class="order-history-item">
+                    <div class="order-history-header">
+                        <div class="order-history-title">${serviceIcon} Заказ #${order.id}</div>
+                        <div class="order-history-date">${orderDate}</div>
+                    </div>
+                    <div class="order-history-details">
+                        <div><strong>Услуга:</strong> ${serviceName}</div>
+                        <div><strong>Адрес:</strong> ${order.address}</div>
+                        <div><strong>Дата и время:</strong> ${order.delivery_date} в ${order.delivery_time}</div>
+                        <div><strong>Количество:</strong> ${order.quantity} ${order.service_type === 'water' ? 'куб.м' : 'выезд'}</div>
+                        <div><strong>Стоимость:</strong> ${order.price.toLocaleString()} ₽</div>
+                        <div><strong>Статус:</strong> <span class="status-${order.status}">${statusText}</span></div>
+                    </div>
+                </div>
+            `;
+        });
+    }
+    
+    document.getElementById('orderHistory').innerHTML = historyHtml;
+    
+    } catch (error) {
+        console.error('Ошибка загрузки истории:', error);
+        document.getElementById('orderHistory').innerHTML = '<p style="text-align: center; color: #666;">Ошибка загрузки истории заказов</p>';
+    }
+}
+
+function getOrderStatusText(status) {
+    const statusMap = {
+        'pending': 'Ожидает подтверждения',
+        'confirmed': 'Подтвержден',
+        'in_progress': 'Выполняется',
+        'completed': 'Выполнен',
+        'cancelled': 'Отменен'
+    };
+    return statusMap[status] || 'Обрабатывается';
+}
+
+async function loginDriver(e) {
+    e.preventDefault();
+    
+    const phone = document.getElementById('loginDriverPhone').value;
+    
+    try {
+        // Проверяем, есть ли такой водитель в Supabase
+        const { data, error } = await supabaseClient
+            .from('drivers')
+            .select('*')
+            .eq('phone', phone)
+            .single();
+        
+        if (error && error.code !== 'PGRST116') {
+            throw error;
+        }
+        
+        if (data) {
+            if (data.status === 'pending') {
+                alert('Ваш аккаунт ожидает активации администратором. Пожалуйста, подождите.');
+                return;
+            }
+            
+            if (data.status === 'blocked') {
+                alert('Ваш аккаунт заблокирован. Обратитесь к администратору.');
+                return;
+            }
+            
+            // Сохраняем данные водителя
+            localStorage.setItem('driverName', data.full_name);
+            localStorage.setItem('driverId', data.id);
+            localStorage.setItem('driverPhone', data.phone);
+            
+            closeModals();
+            
+            // Переходим в CRM водителя
+            window.open('driver.html', '_blank');
+        } else {
+            alert('Водитель с таким номером не найден. Пожалуйста, зарегистрируйтесь.');
+            switchDriverTab('register');
+        }
+    } catch (error) {
+        console.error('Ошибка входа водителя:', error);
+        alert('Ошибка при входе. Попробуйте еще раз.');
+    }
+}
+
+async function registerDriver(e) {
+    e.preventDefault();
+    
+    const fullName = document.getElementById('driverFullName').value;
+    const service = document.getElementById('driverService').value;
+    const phone = document.getElementById('driverPhone').value;
+    const carNumber = document.getElementById('driverCarNumber').value;
+    
+    try {
+        // Проверяем, нет ли уже такого водителя
+        const { data: existingDriver } = await supabaseClient
+            .from('drivers')
+            .select('id')
+            .eq('phone', phone)
+            .single();
+        
+        if (existingDriver) {
+            alert('Водитель с таким номером уже зарегистрирован. Используйте вкладку "Вход".');
+            return;
+        }
+        
+        // Регистрируем нового водителя
+        const { data: newDriver, error } = await supabaseClient
+            .from('drivers')
+            .insert([{
+                full_name: fullName,
+                phone: phone,
+                service_type: service,
+                car_number: carNumber
+            }])
+            .select()
+            .single();
+        
+        if (error) throw error;
+        
+        closeModals();
+        
+        alert(`Регистрация успешна!
+
+Спасибо за регистрацию, ${fullName}!
+
+Ваш аккаунт отправлен на модерацию.
+Мы свяжемся с вами после активации.`);
+        
+        // Очищаем форму
+        document.getElementById('driverRegisterForm').reset();
+        
+    } catch (error) {
+        console.error('Ошибка регистрации водителя:', error);
+        
+        if (error.code === '23505') { // Ошибка уникальности
+            alert('Водитель с таким номером уже существует.');
+        } else {
+            alert('Ошибка при регистрации. Попробуйте еще раз.');
+        }
+    }
+}
+
+function getServiceName(service) {
+    const serviceNames = {
+        'water': 'Водовозка',
+        'septic': 'Откачка септика',
+        'both': 'Обе услуги'
+    };
+    return serviceNames[service] || service;
+}
+
 function logout() {
     localStorage.removeItem('userName');
+    localStorage.removeItem('userPhone');
     localStorage.removeItem('userToken');
     window.location.href = 'login.html';
 }

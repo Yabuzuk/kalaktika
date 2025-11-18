@@ -65,9 +65,13 @@ function setupEventListeners() {
 
 async function loadOrders() {
     try {
+        const currentDriverId = localStorage.getItem('driverId');
+        
+        // Загружаем только заказы текущего водителя или новые заказы
         const { data, error } = await supabaseClient
             .from('orders')
             .select('*')
+            .or(`driver_id.eq.${currentDriverId},driver_id.is.null`)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -99,9 +103,30 @@ function renderOrders() {
     
     // Добавляем обработчики событий
     document.querySelectorAll('.order-card').forEach(card => {
-        card.addEventListener('click', function() {
+        card.addEventListener('click', function(e) {
+            // Проверяем, не кликнули ли по кнопке
+            if (e.target.classList.contains('btn')) {
+                e.stopPropagation();
+                return;
+            }
+            
             const orderId = this.dataset.orderId;
             showOrderDetails(orderId);
+        });
+    });
+    
+    // Обработчики для кнопок принятия/отклонения
+    document.querySelectorAll('.btn-accept, .btn-cancel').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const orderId = this.dataset.orderId;
+            const action = this.dataset.action;
+            
+            if (action === 'accept') {
+                updateOrderStatus(orderId, 'confirmed');
+            } else if (action === 'decline') {
+                updateOrderStatus(orderId, 'cancelled');
+            }
         });
     });
 }
@@ -167,8 +192,8 @@ function getActionButtons(order) {
     switch (order.status) {
         case 'pending':
             return `
-                <button class="btn btn-accept" onclick="updateOrderStatus(${order.id}, 'confirmed')">Принять</button>
-                <button class="btn btn-cancel" onclick="updateOrderStatus(${order.id}, 'cancelled')">Отклонить</button>
+                <button class="btn btn-accept" data-order-id="${order.id}" data-action="accept">Принять</button>
+                <button class="btn btn-cancel" data-order-id="${order.id}" data-action="decline">Отклонить</button>
             `;
         case 'confirmed':
             return `
@@ -243,22 +268,47 @@ function formatDateTime(date, time) {
 }
 
 function updateStats() {
-    const newOrders = orders.filter(order => order.status === 'pending').length;
+    const currentDriverId = localStorage.getItem('driverId');
+    
+    // Новые заказы (без водителя)
+    const newOrders = orders.filter(order => 
+        order.status === 'pending' && !order.driver_id
+    ).length;
+    
+    // Активные заказы водителя
     const activeOrders = orders.filter(order => 
-        order.status === 'confirmed' || order.status === 'in_progress'
+        order.driver_id == currentDriverId &&
+        (order.status === 'confirmed' || order.status === 'in_progress')
     ).length;
     
     const today = new Date().toISOString().split('T')[0];
-    const completedToday = orders.filter(order => 
-        order.status === 'completed' && 
+    
+    // Все выполненные заказы водителя
+    const allCompletedOrders = orders.filter(order => 
+        order.driver_id == currentDriverId &&
+        order.status === 'completed'
+    );
+    
+    // Выполненные сегодня
+    const completedToday = allCompletedOrders.filter(order => 
         order.delivery_date === today
     );
     
-    const todayEarnings = completedToday.reduce((sum, order) => sum + order.price, 0);
+    // Общая статистика (все время)
+    const totalAllEarnings = allCompletedOrders.reduce((sum, order) => sum + order.price, 0);
+    const totalCommission = Math.round(totalAllEarnings * 0.1);
+    const totalDriverEarnings = totalAllEarnings - totalCommission;
+    
+    // Статистика за сегодня
+    const todayTotalEarnings = completedToday.reduce((sum, order) => sum + order.price, 0);
+    const todayCommission = Math.round(todayTotalEarnings * 0.1);
+    const todayEarnings = todayTotalEarnings - todayCommission;
     
     document.getElementById('newOrdersCount').textContent = newOrders;
     document.getElementById('activeOrdersCount').textContent = activeOrders;
-    document.getElementById('completedTodayCount').textContent = completedToday.length;
+    document.getElementById('totalCompletedCount').textContent = allCompletedOrders.length;
+    document.getElementById('totalEarnings').textContent = totalDriverEarnings.toLocaleString() + ' ₽';
+    document.getElementById('totalCommission').textContent = totalCommission.toLocaleString() + ' ₽';
     document.getElementById('todayEarnings').textContent = todayEarnings.toLocaleString() + ' ₽';
 }
 
@@ -299,6 +349,16 @@ function closeDayModal() {
     document.getElementById('dayOrdersModal').style.display = 'none';
 }
 
+function showOrderDetailsFromCalendar(orderId) {
+    // Закрываем модальное окно дня
+    closeDayModal();
+    
+    // Открываем детали заказа
+    setTimeout(() => {
+        showOrderDetails(orderId);
+    }, 100);
+}
+
 function showDayOrders(dateStr) {
     const dayOrders = orders.filter(order => {
         return order.delivery_date === dateStr;
@@ -328,7 +388,7 @@ function showDayOrders(dateStr) {
             const statusText = getStatusText(order.status);
             
             content += `
-                <div class="day-order-card" onclick="showOrderDetails(${order.id})">
+                <div class="day-order-card" onclick="showOrderDetailsFromCalendar(${order.id})">
                     <div class="day-order-header">
                         <div class="day-order-title">${serviceIcon} Заказ #${order.id}</div>
                         <div class="day-order-time">${order.delivery_time.slice(0, 5)}</div>
@@ -452,12 +512,14 @@ function getOrdersForDate(date) {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     const dateStr = `${year}-${month}-${day}`;
+    const currentDriverId = localStorage.getItem('driverId');
     
     return orders.filter(order => {
         // Сравниваем только дату без времени
         const orderDate = order.delivery_date;
         return orderDate === dateStr && 
-               (order.status === 'pending' || order.status === 'confirmed' || order.status === 'in_progress');
+               order.driver_id == currentDriverId &&
+               (order.status === 'confirmed' || order.status === 'in_progress');
     });
 }
 

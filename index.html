@@ -11,15 +11,18 @@
 </head>
 <body>
     <div class="container">
-        <header>
-            <h1>🚛 Водовозка и Септик</h1>
-            <div class="user-info">
-                <span id="userName">Добро пожаловать!</span>
-                <button id="logoutBtn">Выйти</button>
-            </div>
-        </header>
+        <div class="burger-menu-btn" id="burgerBtn">
+            <span></span>
+            <span></span>
+            <span></span>
+        </div>
 
         <main class="order-form-single">
+            <div id="currentOrderSection" class="current-order-section" style="display: none;">
+                <h3>🚚 Текущий заказ</h3>
+                <div id="currentOrderDetails"></div>
+            </div>
+            
             <div class="form-section-full">
                 <h2>Новый заказ</h2>
                 
@@ -75,6 +78,125 @@
             </div>
         </main>
     </div>
+
+    <!-- Боковое меню -->
+    <div id="sideMenu" class="side-menu">
+        <div class="menu-header">
+            <h3>🚛 Меню</h3>
+            <button id="closeMenu" class="close-menu">&times;</button>
+        </div>
+        
+        <div class="menu-content">
+            <div class="user-profile">
+                <div class="avatar">👤</div>
+                <div class="user-name" id="menuUserName">Пользователь</div>
+                <div class="user-phone" id="menuUserPhone">+7 (999) 123-45-67</div>
+            </div>
+            
+            <nav class="menu-nav">
+                <a href="#" id="profileBtn" class="menu-item">
+                    <span class="icon">👤</span>
+                    <span>Профиль</span>
+                </a>
+                <a href="#" id="historyBtn" class="menu-item">
+                    <span class="icon">📋</span>
+                    <span>История заказов</span>
+                </a>
+                <a href="#" id="settingsBtn" class="menu-item">
+                    <span class="icon">⚙️</span>
+                    <span>Настройки</span>
+                </a>
+                <a href="#" id="becomeDriverBtn" class="menu-item become-driver">
+                    <span class="icon">🚛</span>
+                    <span>Стать исполнителем</span>
+                </a>
+                <a href="#" id="logoutBtn" class="menu-item logout">
+                    <span class="icon">🚪</span>
+                    <span>Выйти</span>
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Модальные окна -->
+    <div id="profileModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3>👤 Профиль</h3>
+            <form id="profileForm">
+                <div class="form-group">
+                    <label>Имя:</label>
+                    <input type="text" id="profileName" required>
+                </div>
+                <div class="form-group">
+                    <label>Телефон:</label>
+                    <input type="tel" id="profilePhone" required>
+                </div>
+                <button type="submit" class="btn-save">Сохранить</button>
+            </form>
+        </div>
+    </div>
+
+    <div id="historyModal" class="modal">
+        <div class="modal-content history-modal">
+            <span class="close">&times;</span>
+            <h3>📋 История заказов</h3>
+            <div id="orderHistory"></div>
+        </div>
+    </div>
+
+    <div id="driverModal" class="modal">
+        <div class="modal-content">
+            <span class="close">&times;</span>
+            <h3 id="driverModalTitle">🚛 Водитель</h3>
+            
+            <div class="driver-tabs">
+                <button class="tab-btn active" data-tab="login">Вход</button>
+                <button class="tab-btn" data-tab="register">Регистрация</button>
+            </div>
+            
+            <!-- Вход водителя -->
+            <div id="driverLoginTab" class="tab-content active">
+                <form id="driverLoginForm">
+                    <div class="form-group">
+                        <label>Номер телефона:</label>
+                        <input type="tel" id="loginDriverPhone" placeholder="+7 (999) 123-45-67" required>
+                    </div>
+                    <button type="submit" class="btn-save">Войти в CRM</button>
+                </form>
+            </div>
+            
+            <!-- Регистрация водителя -->
+            <div id="driverRegisterTab" class="tab-content">
+                <form id="driverRegisterForm">
+                    <div class="form-group">
+                        <label>ФИО:</label>
+                        <input type="text" id="driverFullName" placeholder="Иванов Иван Иванович" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Тип услуги:</label>
+                        <select id="driverService" required>
+                            <option value="">Выберите услугу</option>
+                            <option value="water">💧 Водовозка</option>
+                            <option value="septic">🚽 Откачка септика</option>
+                            <option value="both">🚛 Обе услуги</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Номер телефона:</label>
+                        <input type="tel" id="driverPhone" placeholder="+7 (999) 123-45-67" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Номер автомобиля:</label>
+                        <input type="text" id="driverCarNumber" placeholder="А123БК77" required>
+                    </div>
+                    <button type="submit" class="btn-save">Зарегистрироваться</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="overlay" id="overlay"></div>
 
     <div id="mapModal" class="modal">
         <div class="modal-content">

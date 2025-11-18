@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель - Водовозка и Септик</title>
+    <link rel="stylesheet" href="admin-styles.css">
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛠️ Админ-панель</h1>
+            <button id="logoutBtn">Выйти</button>
+        </header>
+
+        <div class="stats-panel">
+            <div class="stat-card">
+                <h3>Всего заказов</h3>
+                <span id="totalOrders">0</span>
+            </div>
+            <div class="stat-card">
+                <h3>Общий оборот</h3>
+                <span id="totalRevenue">0 ₽</span>
+            </div>
+            <div class="stat-card">
+                <h3>Комиссия (10%)</h3>
+                <span id="totalCommission">0 ₽</span>
+            </div>
+            <div class="stat-card">
+                <h3>Активных водителей</h3>
+                <span id="activeDrivers">0</span>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="drivers-section">
+                <div class="section-header">
+                    <h2>👥 Управление водителями</h2>
+                    <div class="filters">
+                        <button class="filter-btn active" data-status="all">Все</button>
+                        <button class="filter-btn" data-status="pending">Ожидают</button>
+                        <button class="filter-btn" data-status="active">Активные</button>
+                        <button class="filter-btn" data-status="blocked">Заблокированные</button>
+                    </div>
+                </div>
+                <div id="driversList"></div>
+            </div>
+
+            <div class="orders-section">
+                <div class="section-header">
+                    <h2>📋 Последние заказы</h2>
+                </div>
+                <div id="recentOrders"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="admin-script.js"></script>
+</body>
+</html>
