@@ -170,6 +170,7 @@ function setupEventListeners() {
     // Модальные окна
     document.querySelector('.close').addEventListener('click', closeModal);
     document.querySelector('.close-day').addEventListener('click', closeDayModal);
+    document.querySelector('.close-map').addEventListener('click', closeMapModal);
     
     // Выход
     document.getElementById('logoutBtn').addEventListener('click', logout);
@@ -287,6 +288,7 @@ function createOrderCard(order) {
             
             <div class="order-actions">
                 ${getActionButtons(order)}
+                <button class="btn btn-map" onclick="showOrderMap(${order.id})">📍 Карта</button>
             </div>
         </div>
     `;
@@ -469,8 +471,10 @@ function showOrderDetails(orderId) {
             <p><strong>Статус:</strong> ${getStatusText(order.status)}</p>
             <p><strong>Создан:</strong> ${new Date(order.created_at).toLocaleString('ru-RU')}</p>
         </div>
-        <div style="text-align: center;">
+        <div style="text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
             ${getActionButtons(order)}
+            <button class="btn btn-map" onclick="showOrderMap(${order.id})">📍 Карта</button>
+            <button class="btn btn-navigate" onclick="navigateToOrder('${order.address}')">📍 Маршрут</button>
         </div>
     `;
     
@@ -780,5 +784,191 @@ function showBrowserNotification(title, body) {
         }
     } else {
         console.log('Нет разрешения на уведомления. Текущий статус:', Notification.permission);
+    }
+}
+
+// Переменные для карты
+let orderMap = null;
+let currentOrderForMap = null;
+let driverLocation = null;
+let routeControl = null;
+
+// Функции для карты и навигации
+function showOrderMap(orderId) {
+    const order = orders.find(o => o.id == orderId);
+    if (!order) return;
+    
+    currentOrderForMap = order;
+    document.getElementById('mapTitle').textContent = `📍 Заказ #${order.id} - ${order.address}`;
+    document.getElementById('mapModal').style.display = 'block';
+    
+    // Инициализируем карту через небольшую задержку
+    setTimeout(() => {
+        initOrderMap(order);
+    }, 300);
+}
+
+function initOrderMap(order) {
+    if (typeof ymaps === 'undefined') {
+        alert('Карты недоступны. Проверьте интернет-соединение.');
+        return;
+    }
+    
+    ymaps.ready(() => {
+        // Удаляем старую карту
+        if (orderMap) {
+            orderMap.destroy();
+        }
+        
+        // Создаем новую карту
+        orderMap = new ymaps.Map('orderMap', {
+            center: [62.5354, 113.9607], // Мирный
+            zoom: 13,
+            controls: ['zoomControl', 'fullscreenControl']
+        });
+        
+        // Находим адрес заказа
+        ymaps.geocode(order.address).then(result => {
+            const firstGeoObject = result.geoObjects.get(0);
+            if (firstGeoObject) {
+                const coords = firstGeoObject.geometry.getCoordinates();
+                
+                // Добавляем метку заказа
+                const orderPlacemark = new ymaps.Placemark(coords, {
+                    balloonContent: `<strong>Заказ #${order.id}</strong><br>${order.address}`,
+                    hintContent: order.address
+                }, {
+                    preset: 'islands#redDotIcon'
+                });
+                
+                orderMap.geoObjects.add(orderPlacemark);
+                orderMap.setCenter(coords, 15);
+            }
+        });
+        
+        // Настраиваем обработчики кнопок
+        document.getElementById('buildRouteBtn').onclick = () => buildRoute();
+        document.getElementById('myLocationBtn').onclick = () => showMyLocation();
+    });
+}
+
+function buildRoute() {
+    if (!currentOrderForMap) return;
+    
+    if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                driverLocation = [position.coords.latitude, position.coords.longitude];
+                
+                // Находим координаты адреса заказа
+                ymaps.geocode(currentOrderForMap.address).then(result => {
+                    const firstGeoObject = result.geoObjects.get(0);
+                    if (firstGeoObject) {
+                        const orderCoords = firstGeoObject.geometry.getCoordinates();
+                        
+                        // Удаляем старый маршрут
+                        if (routeControl) {
+                            orderMap.controls.remove(routeControl);
+                        }
+                        
+                        // Создаем маршрут
+                        routeControl = new ymaps.control.RoutePanel({
+                            options: {
+                                showHeader: true,
+                                title: 'Маршрут к заказу'
+                            }
+                        });
+                        
+                        const routeButton = new ymaps.control.RouteButton({
+                            data: {
+                                content: 'Построить маршрут'
+                            },
+                            options: {
+                                float: 'right'
+                            }
+                        });
+                        
+                        orderMap.controls.add(routeControl);
+                        orderMap.controls.add(routeButton);
+                        
+                        // Строим маршрут
+                        ymaps.route([driverLocation, orderCoords], {
+                            mapStateAutoApply: true
+                        }).then(route => {
+                            orderMap.geoObjects.add(route);
+                            
+                            // Добавляем метку водителя
+                            const driverPlacemark = new ymaps.Placemark(driverLocation, {
+                                balloonContent: 'Ваше местоположение',
+                                hintContent: 'Вы здесь'
+                            }, {
+                                preset: 'islands#blueDotIcon'
+                            });
+                            
+                            orderMap.geoObjects.add(driverPlacemark);
+                        });
+                    }
+                });
+            },
+            error => {
+                alert('Не удалось определить ваше местоположение');
+            }
+        );
+    } else {
+        alert('Геолокация не поддерживается');
+    }
+}
+
+function showMyLocation() {
+    if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            position => {
+                const coords = [position.coords.latitude, position.coords.longitude];
+                orderMap.setCenter(coords, 16);
+                
+                // Добавляем метку текущего местоположения
+                const myPlacemark = new ymaps.Placemark(coords, {
+                    balloonContent: 'Ваше текущее местоположение',
+                    hintContent: 'Вы здесь'
+                }, {
+                    preset: 'islands#geolocationIcon'
+                });
+                
+                orderMap.geoObjects.add(myPlacemark);
+            },
+            error => {
+                alert('Не удалось определить ваше местоположение');
+            }
+        );
+    }
+}
+
+function closeMapModal() {
+    document.getElementById('mapModal').style.display = 'none';
+    if (orderMap) {
+        orderMap.destroy();
+        orderMap = null;
+    }
+}
+
+function navigateToOrder(address) {
+    // Оставляем для совместимости
+    if ('geolocation' in navigator) {
+        navigator.geolocation.getCurrentPosition(
+            function(position) {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                
+                const routeUrl = `https://yandex.ru/maps/?rtext=${lat},${lon}~${encodeURIComponent(address)}&rtt=auto`;
+                window.open(routeUrl, '_blank');
+            },
+            function(error) {
+                const mapUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}&mode=search`;
+                window.open(mapUrl, '_blank');
+            }
+        );
+    } else {
+        const mapUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}&mode=search`;
+        window.open(mapUrl, '_blank');
     }
 }
