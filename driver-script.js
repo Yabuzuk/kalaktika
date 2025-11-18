@@ -11,6 +11,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     setupEventListeners();
     loadOrders();
     
+    // Запрашиваем разрешение на уведомления
+    requestNotificationPermission();
+    
     // Подписка на изменения заказов
     subscribeToDriverOrderUpdates();
     
@@ -39,6 +42,8 @@ function subscribeToDriverOrderUpdates() {
             
             // Показываем уведомления
             if (payload.eventType === 'INSERT') {
+                playNotificationSound();
+                showBrowserNotification('Новый заказ!', 'Поступил новый заказ на выполнение');
                 showDriverNotification('Новый заказ поступил!', 'info');
             } else if (payload.eventType === 'UPDATE') {
                 const order = payload.new;
@@ -702,4 +707,52 @@ function showReminder(message, type = 'info') {
     setTimeout(() => {
         notification.remove();
     }, 5000);
+}
+
+// Функции для уведомлений
+function requestNotificationPermission() {
+    if ('Notification' in window && Notification.permission === 'default') {
+        Notification.requestPermission();
+    }
+}
+
+function playNotificationSound() {
+    // Создаем звуковое уведомление
+    const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+    oscillator.frequency.setValueAtTime(600, audioContext.currentTime + 0.1);
+    oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+    
+    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + 0.3);
+}
+
+function showBrowserNotification(title, body) {
+    if ('Notification' in window && Notification.permission === 'granted') {
+        const notification = new Notification(title, {
+            body: body,
+            icon: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjdlZWEiLz4KPHN2ZyB4PSIxNiIgeT0iMTYiIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0yMCA4aC0zVjRIMy4yNUwyIDVsLjkgMUgzdjEyYzAgMS4xLjkgMiAyIDJoMTRjMS4xIDAgMi0uOSAyLTJWOHptLTcgN2MtMS42NiAwLTMtMS4zNC0zLTNzMS4zNC0zIDMtMyAzIDEuMzQgMyAzLTEuMzQgMy0zIDN6Ii8+Cjwvc3ZnPgo8L3N2Zz4K',
+            badge: 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjQiIGhlaWdodD0iNjQiIHZpZXdCb3g9IjAgMCA2NCA2NCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjY0IiBoZWlnaHQ9IjY0IiByeD0iMTIiIGZpbGw9IiM2NjdlZWEiLz4KPHN2ZyB4PSIxNiIgeT0iMTYiIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJ3aGl0ZSI+CjxwYXRoIGQ9Ik0yMCA4aC0zVjRIMy4yNUwyIDVsLjkgMUgzdjEyYzAgMS4xLjkgMiAyIDJoMTRjMS4xIDAgMi0uOSAyLTJWOHptLTcgN2MtMS42NiAwLTMtMS4zNC0zLTNzMS4zNC0zIDMtMyAzIDEuMzQgMyAzLTEuMzQgMy0zIDN6Ii8+Cjwvc3ZnPgo8L3N2Zz4K'
+        });
+        
+        // Автозакрытие через 5 секунд
+        setTimeout(() => {
+            notification.close();
+        }, 5000);
+        
+        // Клик по уведомлению - фокус на окно
+        notification.onclick = function() {
+            window.focus();
+            notification.close();
+        };
+    }
 }
