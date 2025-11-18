@@ -463,17 +463,17 @@ header h1 {
 
 @media (max-width: 768px) {
     .main-content {
-        grid-template-columns: 1fr;
+        grid-template-columns: 1fr !important;
     }
     
-    .order-info {
-        grid-template-columns: 1fr;
-        gap: 4px;
+    .orders-section .order-info {
+        grid-template-columns: 1fr !important;
+        gap: 4px !important;
     }
     
-    .order-actions {
-        flex-direction: column;
-        gap: 6px;
+    .orders-section .order-actions {
+        flex-direction: column !important;
+        gap: 6px !important;
     }
     
     .filters {
@@ -484,25 +484,37 @@ header h1 {
         min-height: 60px;
     }
     
-    .order-card {
-        padding: 10px;
-        margin-bottom: 6px;
+    .orders-list .order-card {
+        padding: 10px !important;
+        margin-bottom: 6px !important;
+        border-radius: 6px !important;
     }
     
-    .order-header {
-        margin-bottom: 6px;
+    .orders-list .order-header {
+        margin-bottom: 6px !important;
     }
     
-    .info-item {
-        gap: 2px;
+    .orders-list .info-item {
+        gap: 2px !important;
+        font-size: 11px !important;
     }
     
-    .info-label {
-        font-size: 10px;
-        min-width: 45px;
+    .orders-list .info-label {
+        font-size: 10px !important;
+        min-width: 40px !important;
     }
     
-    .info-value {
-        font-size: 12px;
+    .orders-list .info-value {
+        font-size: 11px !important;
+        font-weight: 500 !important;
+    }
+    
+    .orders-list .order-id {
+        font-size: 13px !important;
+    }
+    
+    .orders-list .order-status {
+        font-size: 10px !important;
+        padding: 2px 8px !important;
     }
 }
