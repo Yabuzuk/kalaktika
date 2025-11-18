@@ -483,7 +483,7 @@ function showOrderDetails(orderId) {
         <div style="text-align: center; display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
             ${getActionButtons(order)}
             <button class="btn btn-map" onclick="showOrderMap(${order.id})">📍 Карта</button>
-            <button class="btn btn-navigate" onclick="navigateToOrder('${order.address}')">📍 Маршрут</button>
+            <button class="btn btn-navigate" onclick="navigateToOrder('Мирный, ${order.address}')">📍 Маршрут</button>
         </div>
     `;
     
@@ -839,8 +839,9 @@ function initOrderMap(order) {
             controls: ['zoomControl', 'fullscreenControl']
         });
         
-        // Находим адрес заказа
-        ymaps.geocode(order.address).then(result => {
+        // Находим адрес заказа в Мирном
+        const fullAddress = `Мирный, ${order.address}`;
+        ymaps.geocode(fullAddress).then(result => {
             const firstGeoObject = result.geoObjects.get(0);
             if (firstGeoObject) {
                 const coords = firstGeoObject.geometry.getCoordinates();
@@ -855,79 +856,58 @@ function initOrderMap(order) {
                 
                 orderMap.geoObjects.add(orderPlacemark);
                 orderMap.setCenter(coords, 15);
+                
+                // Автоматически строим маршрут
+                buildRouteAutomatically(coords);
             }
         });
         
         // Настраиваем обработчики кнопок
-        document.getElementById('buildRouteBtn').onclick = () => buildRoute();
         document.getElementById('myLocationBtn').onclick = () => showMyLocation();
     });
 }
 
-function buildRoute() {
-    if (!currentOrderForMap) return;
-    
+function buildRouteAutomatically(orderCoords) {
     if ('geolocation' in navigator) {
         navigator.geolocation.getCurrentPosition(
             position => {
                 driverLocation = [position.coords.latitude, position.coords.longitude];
                 
-                // Находим координаты адреса заказа
-                ymaps.geocode(currentOrderForMap.address).then(result => {
-                    const firstGeoObject = result.geoObjects.get(0);
-                    if (firstGeoObject) {
-                        const orderCoords = firstGeoObject.geometry.getCoordinates();
-                        
-                        // Удаляем старый маршрут
-                        if (routeControl) {
-                            orderMap.controls.remove(routeControl);
-                        }
-                        
-                        // Создаем маршрут
-                        routeControl = new ymaps.control.RoutePanel({
-                            options: {
-                                showHeader: true,
-                                title: 'Маршрут к заказу'
-                            }
-                        });
-                        
-                        const routeButton = new ymaps.control.RouteButton({
-                            data: {
-                                content: 'Построить маршрут'
-                            },
-                            options: {
-                                float: 'right'
-                            }
-                        });
-                        
-                        orderMap.controls.add(routeControl);
-                        orderMap.controls.add(routeButton);
-                        
-                        // Строим маршрут
-                        ymaps.route([driverLocation, orderCoords], {
-                            mapStateAutoApply: true
-                        }).then(route => {
-                            orderMap.geoObjects.add(route);
-                            
-                            // Добавляем метку водителя
-                            const driverPlacemark = new ymaps.Placemark(driverLocation, {
-                                balloonContent: 'Ваше местоположение',
-                                hintContent: 'Вы здесь'
-                            }, {
-                                preset: 'islands#blueDotIcon'
-                            });
-                            
-                            orderMap.geoObjects.add(driverPlacemark);
-                        });
-                    }
+                // Строим маршрут автоматически
+                ymaps.route([driverLocation, orderCoords], {
+                    mapStateAutoApply: true,
+                    routingMode: 'auto'
+                }).then(route => {
+                    orderMap.geoObjects.add(route);
+                    
+                    // Добавляем метку водителя
+                    const driverPlacemark = new ymaps.Placemark(driverLocation, {
+                        balloonContent: 'Ваше местоположение',
+                        hintContent: 'Вы здесь'
+                    }, {
+                        preset: 'islands#blueDotIcon'
+                    });
+                    
+                    orderMap.geoObjects.add(driverPlacemark);
+                    
+                    // Показываем все объекты на карте
+                    orderMap.setBounds(orderMap.geoObjects.getBounds(), {
+                        checkZoomRange: true,
+                        zoomMargin: 50
+                    });
+                }).catch(error => {
+                    console.error('Ошибка построения маршрута:', error);
                 });
             },
             error => {
-                alert('Не удалось определить ваше местоположение');
+                console.log('Не удалось определить местоположение водителя');
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 300000
             }
         );
-    } else {
-        alert('Геолокация не поддерживается');
     }
 }
 
