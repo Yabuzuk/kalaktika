@@ -4,6 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Вход - Водовозка и Септик</title>
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
     <style>
         * {
             margin: 0;
@@ -131,25 +133,64 @@
     </div>
 
     <script>
-        document.getElementById('loginForm').addEventListener('submit', function(e) {
+        document.getElementById('loginForm').addEventListener('submit', async function(e) {
             e.preventDefault();
             
             const phone = document.getElementById('phone').value;
             const name = document.getElementById('name').value;
             
-            if (phone && name) {
-                // Сохраняем данные пользователя
-                localStorage.setItem('userName', name);
+            if (!phone || !name) {
+                alert('Пожалуйста, заполните все поля');
+                return;
+            }
+            
+            try {
+                // Проверяем, есть ли пользователь в базе
+                let { data: user, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('phone', phone)
+                    .single();
+                
+                if (error && error.code !== 'PGRST116') {
+                    throw error;
+                }
+                
+                if (!user) {
+                    // Создаем нового пользователя
+                    const { data: newUser, error: createError } = await supabaseClient
+                        .from('users')
+                        .insert([{ phone: phone, name: name }])
+                        .select()
+                        .single();
+                        
+                    if (createError) throw createError;
+                    user = newUser;
+                } else {
+                    // Обновляем время последнего входа
+                    await supabaseClient
+                        .from('users')
+                        .update({ 
+                            last_login: new Date().toISOString(),
+                            name: name // Обновляем имя, если изменилось
+                        })
+                        .eq('id', user.id);
+                }
+                
+                // Сохраняем только телефон для проверки аутентификации
                 localStorage.setItem('userPhone', phone);
-                localStorage.setItem('userToken', 'demo_token_' + Date.now());
                 
                 // Переходим на главную страницу
                 window.location.href = 'index.html';
+                
+            } catch (error) {
+                console.error('Ошибка авторизации:', error);
+                alert('Ошибка при входе. Попробуйте еще раз.');
             }
         });
 
         // Проверяем, авторизован ли уже пользователь
-        if (localStorage.getItem('userToken')) {
+        if (localStorage.getItem('userPhone')) {
             window.location.href = 'index.html';
         }
 

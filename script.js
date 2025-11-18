@@ -8,23 +8,56 @@ const PRICES = {
 let map, modalMap;
 let selectedCoords = null;
 let placemark = null;
+let currentUser = null;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', function() {
-    initializeApp();
+    checkAuthentication();
+});
+
+async function checkAuthentication() {
+    const userPhone = localStorage.getItem('userPhone');
+    
+    if (!userPhone) {
+        window.location.href = 'login.html';
+        return;
+    }
+    
+    try {
+        // Проверяем пользователя в базе данных
+        const { data: user, error } = await supabaseClient
+            .from('users')
+            .select('*')
+            .eq('phone', userPhone)
+            .single();
+            
+        if (error || !user) {
+            localStorage.clear();
+            window.location.href = 'login.html';
+            return;
+        }
+        
+        currentUser = user;
+        
+        // Контекст пользователя установлен
+        
+        initializeApp();
+        
+    } catch (error) {
+        console.error('Ошибка проверки аутентификации:', error);
+        localStorage.clear();
+        window.location.href = 'login.html';
+    }
+}
+
+function initializeApp() {
+    // Обновляем данные в меню
+    document.getElementById('menuUserName').textContent = currentUser.name;
+    document.getElementById('menuUserPhone').textContent = currentUser.phone;
+    
     setupEventListeners();
     setMinDate();
     calculatePrice();
-});
-
-function initializeApp() {
-    // Проверяем авторизацию
-    const userName = localStorage.getItem('userName') || 'Пользователь';
-    const userPhone = localStorage.getItem('userPhone') || '+7 (999) 123-45-67';
-    
-    // Обновляем данные в меню
-    document.getElementById('menuUserName').textContent = userName;
-    document.getElementById('menuUserPhone').textContent = userPhone;
     
     // Загружаем текущий заказ
     loadCurrentOrder();
@@ -33,11 +66,16 @@ function initializeApp() {
     subscribeToOrderUpdates();
     
     // Инициализируем Яндекс карты
-    ymaps.ready(initMaps);
+    if (typeof ymaps !== 'undefined') {
+        ymaps.ready(initMaps);
+    } else {
+        console.log('Яндекс.Карты API не загружен, работаем без карт');
+        hideMapFeatures();
+    }
 }
 
 function subscribeToOrderUpdates() {
-    const userPhone = localStorage.getItem('userPhone');
+    if (!currentUser) return;
     
     // Подписка на изменения заказов пользователя
     supabaseClient
@@ -46,7 +84,7 @@ function subscribeToOrderUpdates() {
             event: '*',
             schema: 'public',
             table: 'orders',
-            filter: `user_phone=eq.${userPhone}`
+            filter: `user_id=eq.${currentUser.id}`
         }, (payload) => {
             console.log('Изменение заказа:', payload);
             
@@ -90,14 +128,14 @@ function showOrderUpdateNotification(order) {
 }
 
 async function loadCurrentOrder() {
-    const userPhone = localStorage.getItem('userPhone');
+    if (!currentUser) return;
     
     try {
         // Ищем текущий невыполненный заказ
         const { data: currentOrder, error } = await supabaseClient
             .from('orders')
             .select('*')
-            .eq('user_phone', userPhone)
+            .eq('user_id', currentUser.id)
             .in('status', ['pending', 'confirmed', 'in_progress'])
             .order('created_at', { ascending: false })
             .limit(1)
@@ -147,24 +185,53 @@ function hideCurrentOrder() {
 }
 
 function initMaps() {
-    // Карта в модальном окне
-    modalMap = new ymaps.Map('modalMap', {
-        center: [62.5354, 113.9607], // Мирный, Якутия
-        zoom: 13,
-        controls: ['zoomControl', 'searchControl']
-    });
-    
-    // Ограничиваем область поиска городом Мирный
-    modalMap.controls.get('searchControl').options.set({
-        boundedBy: [[62.50, 113.90], [62.57, 114.02]], // Границы города Мирный
-        strictBounds: true
-    });
+    try {
+        // Проверяем доступность API
+        if (typeof ymaps === 'undefined') {
+            console.error('Яндекс.Карты API не загружен');
+            hideMapFeatures();
+            return;
+        }
 
-    // Обработчик клика по карте в модальном окне
-    modalMap.events.add('click', function(e) {
-        const coords = e.get('coords');
-        selectLocationOnMap(coords);
-    });
+        // Карта в модальном окне
+        modalMap = new ymaps.Map('modalMap', {
+            center: [62.5354, 113.9607], // Мирный, Якутия
+            zoom: 13,
+            controls: ['zoomControl', 'searchControl']
+        });
+        
+        // Ограничиваем область поиска городом Мирный
+        modalMap.controls.get('searchControl').options.set({
+            boundedBy: [[62.50, 113.90], [62.57, 114.02]], // Границы города Мирный
+            strictBounds: true
+        });
+
+        // Обработчик клика по карте в модальном окне
+        modalMap.events.add('click', function(e) {
+            const coords = e.get('coords');
+            selectLocationOnMap(coords);
+        });
+        
+        console.log('Яндекс.Карты успешно инициализированы');
+        
+    } catch (error) {
+        console.error('Ошибка инициализации карт:', error);
+        hideMapFeatures();
+    }
+}
+
+function hideMapFeatures() {
+    // Скрываем кнопку выбора на карте
+    const mapButton = document.getElementById('selectOnMap');
+    if (mapButton) {
+        mapButton.style.display = 'none';
+    }
+    
+    // Отключаем автодополнение
+    const addressInput = document.getElementById('address');
+    if (addressInput) {
+        addressInput.placeholder = 'Введите адрес вручную';
+    }
 }
 
 function setupEventListeners() {
@@ -214,8 +281,7 @@ function setupEventListeners() {
         });
     });
 
-    // Поиск адреса при вводе
-    document.getElementById('address').addEventListener('input', debounce(showAddressSuggestions, 300));
+
     
     // Обновление временных слотов при смене даты
     document.getElementById('date').addEventListener('change', generateTimeSlots);
@@ -382,63 +448,17 @@ function confirmAddress() {
 }
 
 function showAddressSuggestions(query) {
+    // Отключаем автодополнение - используем только карту
     const suggestionsContainer = document.getElementById('addressSuggestions');
-    
-    if (query.length < 2) {
-        suggestionsContainer.style.display = 'none';
-        return;
-    }
-    
-    ymaps.suggest('Мирный, Якутия, ' + query, {
-        boundedBy: [[62.50, 113.90], [62.57, 114.02]],
-        strictBounds: true,
-        results: 5
-    }).then(function(suggestions) {
-        suggestionsContainer.innerHTML = '';
-        
-        if (suggestions.length > 0) {
-            suggestions.forEach(function(suggestion) {
-                const item = document.createElement('div');
-                item.className = 'suggestion-item';
-                item.textContent = suggestion.displayName;
-                item.addEventListener('click', function() {
-                    selectSuggestion(suggestion.displayName);
-                });
-                suggestionsContainer.appendChild(item);
-            });
-            suggestionsContainer.style.display = 'block';
-        } else {
-            suggestionsContainer.style.display = 'none';
-        }
-    }).catch(function(error) {
-        console.error('Ошибка получения подсказок:', error);
-        suggestionsContainer.style.display = 'none';
-    });
+    suggestionsContainer.style.display = 'none';
 }
 
 function selectSuggestion(address) {
     document.getElementById('address').value = address;
     document.getElementById('addressSuggestions').style.display = 'none';
-    
-    // Показываем адрес на карте
-    geocodeAndShowOnMap(address);
 }
 
-function geocodeAndShowOnMap(address) {
-    ymaps.geocode(address, {
-        results: 1,
-        boundedBy: [[62.50, 113.90], [62.57, 114.02]],
-        strictBounds: true
-    }).then(function(res) {
-        const firstGeoObject = res.geoObjects.get(0);
-        if (firstGeoObject) {
-            const coords = firstGeoObject.geometry.getCoordinates();
-            selectedCoords = coords;
-        }
-    }).catch(function(error) {
-        console.error('Ошибка геокодирования:', error);
-    });
-}
+
 
 async function createOrder() {
     const service = document.querySelector('input[name="service"]:checked').value;
@@ -485,6 +505,8 @@ async function createOrder() {
 }
 
 async function saveOrder(order) {
+    if (!currentUser) throw new Error('Пользователь не авторизован');
+    
     try {
         const { data, error } = await supabaseClient
             .from('orders')
@@ -497,8 +519,9 @@ async function saveOrder(order) {
                 quantity: order.quantity,
                 price: order.price,
                 status: order.status,
-                user_name: localStorage.getItem('userName'),
-                user_phone: localStorage.getItem('userPhone')
+                user_id: currentUser.id,
+                user_name: currentUser.name,
+                user_phone: currentUser.phone
             }]);
 
         if (error) throw error;
@@ -559,11 +582,11 @@ function closeSideMenu() {
 
 function openProfileModal() {
     closeSideMenu();
-    const userName = localStorage.getItem('userName') || '';
-    const userPhone = localStorage.getItem('userPhone') || '';
     
-    document.getElementById('profileName').value = userName;
-    document.getElementById('profilePhone').value = userPhone;
+    if (!currentUser) return;
+    
+    document.getElementById('profileName').value = currentUser.name;
+    document.getElementById('profilePhone').value = currentUser.phone;
     document.getElementById('profileModal').style.display = 'block';
 }
 
@@ -601,31 +624,54 @@ function closeModals() {
     });
 }
 
-function saveProfile(e) {
+async function saveProfile(e) {
     e.preventDefault();
+    
+    if (!currentUser) return;
+    
     const name = document.getElementById('profileName').value;
     const phone = document.getElementById('profilePhone').value;
     
-    localStorage.setItem('userName', name);
-    localStorage.setItem('userPhone', phone);
-    
-    // Обновляем данные в меню
-    document.getElementById('menuUserName').textContent = name;
-    document.getElementById('menuUserPhone').textContent = phone;
-    
-    closeModals();
-    alert('Профиль обновлен!');
+    try {
+        // Обновляем данные в базе
+        const { error } = await supabaseClient
+            .from('users')
+            .update({ 
+                name: name,
+                phone: phone,
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', currentUser.id);
+            
+        if (error) throw error;
+        
+        // Обновляем локальные данные
+        currentUser.name = name;
+        currentUser.phone = phone;
+        localStorage.setItem('userPhone', phone);
+        
+        // Обновляем данные в меню
+        document.getElementById('menuUserName').textContent = name;
+        document.getElementById('menuUserPhone').textContent = phone;
+        
+        closeModals();
+        alert('Профиль обновлен!');
+        
+    } catch (error) {
+        console.error('Ошибка обновления профиля:', error);
+        alert('Ошибка при обновлении профиля');
+    }
 }
 
 async function loadOrderHistory() {
-    const userPhone = localStorage.getItem('userPhone');
+    if (!currentUser) return;
     
     try {
         // Загружаем заказы из Supabase
         const { data: orders, error } = await supabaseClient
             .from('orders')
             .select('*')
-            .eq('user_phone', userPhone)
+            .eq('user_id', currentUser.id)
             .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -846,9 +892,8 @@ function getServiceName(service) {
 }
 
 function logout() {
-    localStorage.removeItem('userName');
-    localStorage.removeItem('userPhone');
-    localStorage.removeItem('userToken');
+    currentUser = null;
+    localStorage.clear();
     window.location.href = 'login.html';
 }
 

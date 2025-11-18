@@ -19,7 +19,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Инициализация календаря
     initCalendar();
-}
+});
 
 function subscribeToDriverOrderUpdates() {
     // Подписка на все изменения заказов
@@ -33,14 +33,26 @@ function subscribeToDriverOrderUpdates() {
             console.log('Изменение заказа для водителя:', payload);
             
             // Обновляем данные
-            loadOrders();
+            setTimeout(() => {
+                loadOrders();
+            }, 500);
             
-            // Показываем уведомление о новом заказе
+            // Показываем уведомления
             if (payload.eventType === 'INSERT') {
                 showDriverNotification('Новый заказ поступил!', 'info');
+            } else if (payload.eventType === 'UPDATE') {
+                const order = payload.new;
+                if (order && order.id) {
+                    showDriverNotification(`Заказ #${order.id} обновлен`, 'info');
+                }
             }
         })
         .subscribe();
+        
+    // Автообновление каждые 30 секунд
+    setInterval(() => {
+        loadOrders();
+    }, 30000);
 }
 
 function showDriverNotification(message, type = 'info') {
@@ -83,7 +95,7 @@ function showDriverNotification(message, type = 'info') {
     setTimeout(() => {
         notification.remove();
     }, 4000);
-});
+}
 
 function initializeDriver() {
     // Проверяем авторизацию водителя
@@ -292,17 +304,20 @@ async function updateOrderStatus(orderId, newStatus) {
 
         if (error) throw error;
         
-        // Обновляем локальные данные
+        // Обновляем локальные данные немедленно
         const orderIndex = orders.findIndex(order => order.id === orderId);
         if (orderIndex !== -1) {
             orders[orderIndex].status = newStatus;
+            orders[orderIndex].updated_at = new Date().toISOString();
             if (newStatus === 'confirmed') {
                 orders[orderIndex].driver_id = driverId;
             }
         }
         
+        // Мгновенно обновляем интерфейс
         renderOrders();
         updateStats();
+        renderCalendar();
         
         // Показываем уведомление
         showNotification(`Заказ #${orderId} ${getStatusText(newStatus).toLowerCase()}`);

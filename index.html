@@ -5,17 +5,24 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Водовозка и Септик - Сервис доставки</title>
     <link rel="stylesheet" href="styles.css">
-    <script src="https://api-maps.yandex.ru/2.1/?lang=ru_RU" type="text/javascript"></script>
+    <script src="https://api-maps.yandex.ru/2.1/?apikey=63c21778-deb0-4a95-bc2a-fb4d2dd46449&lang=ru_RU" type="text/javascript"></script>
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
 </head>
 <body>
-    <div class="container">
+    <div class="top-bar">
         <div class="burger-menu-btn" id="burgerBtn">
             <span></span>
             <span></span>
             <span></span>
         </div>
+        <div class="app-title">
+            <span class="title-icon">🚛</span>
+            <span class="title-text">Водовозка</span>
+        </div>
+    </div>
+    
+    <div class="container">
 
         <main class="order-form-single">
             <div id="currentOrderSection" class="current-order-section" style="display: none;">
@@ -43,7 +50,7 @@
                 <div class="address-section">
                     <label for="address">Адрес доставки:</label>
                     <div class="address-input-container">
-                        <input type="text" id="address" placeholder="Введите адрес или выберите на карте">
+                        <input type="text" id="address" placeholder="Введите адрес в Мирном или выберите на карте">
                         <div id="addressSuggestions" class="suggestions"></div>
                     </div>
                     <button id="selectOnMap">📍 Выбрать на карте</button>
