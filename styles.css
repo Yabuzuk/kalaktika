@@ -359,6 +359,33 @@ body {
     font-weight: bold;
 }
 
+.cancel-order-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    margin-top: 10px;
+    transition: background 0.3s;
+}
+
+.cancel-order-btn:hover {
+    background: #c82333;
+}
+
+@keyframes slideIn {
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
+}
+
 .form-section-full {
     background: white;
     border-radius: 15px;

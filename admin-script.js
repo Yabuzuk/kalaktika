@@ -5,9 +5,33 @@ let currentFilter = 'all';
 document.addEventListener('DOMContentLoaded', function() {
     loadData();
     setupEventListeners();
+    subscribeToAdminUpdates();
+}
+
+function subscribeToAdminUpdates() {
+    // Подписка на изменения заказов
+    supabaseClient
+        .channel('admin-orders')
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'orders'
+        }, () => {
+            loadData();
+        })
+        .subscribe();
     
-    // Автообновление каждые 30 секунд
-    setInterval(loadData, 30000);
+    // Подписка на изменения водителей
+    supabaseClient
+        .channel('admin-drivers')
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'drivers'
+        }, () => {
+            loadData();
+        })
+        .subscribe();
 });
 
 function setupEventListeners() {

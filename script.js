@@ -29,8 +29,64 @@ function initializeApp() {
     // Загружаем текущий заказ
     loadCurrentOrder();
     
+    // Подписываемся на изменения заказов
+    subscribeToOrderUpdates();
+    
     // Инициализируем Яндекс карты
     ymaps.ready(initMaps);
+}
+
+function subscribeToOrderUpdates() {
+    const userPhone = localStorage.getItem('userPhone');
+    
+    // Подписка на изменения заказов пользователя
+    supabaseClient
+        .channel('user-orders')
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'orders',
+            filter: `user_phone=eq.${userPhone}`
+        }, (payload) => {
+            console.log('Изменение заказа:', payload);
+            
+            // Обновляем текущий заказ
+            loadCurrentOrder();
+            
+            // Показываем уведомление
+            if (payload.eventType === 'UPDATE') {
+                showOrderUpdateNotification(payload.new);
+            }
+        })
+        .subscribe();
+}
+
+function showOrderUpdateNotification(order) {
+    const statusText = getOrderStatusText(order.status);
+    const message = `Заказ #${order.id}: ${statusText}`;
+    
+    // Создаем уведомление
+    const notification = document.createElement('div');
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #667eea;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        z-index: 10000;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        animation: slideIn 0.3s ease;
+    `;
+    notification.textContent = message;
+    
+    document.body.appendChild(notification);
+    
+    // Удаляем через 4 секунды
+    setTimeout(() => {
+        notification.remove();
+    }, 4000);
 }
 
 async function loadCurrentOrder() {
@@ -67,6 +123,7 @@ function showCurrentOrder(order) {
     const serviceIcon = order.service_type === 'water' ? '💧' : '🚽';
     const serviceName = order.service_type === 'water' ? 'Доставка воды' : 'Откачка септика';
     const statusText = getOrderStatusText(order.status);
+    const canCancel = canCancelOrder(order);
     
     const orderHtml = `
         <div class="current-order-details">
@@ -77,6 +134,7 @@ function showCurrentOrder(order) {
             <div><strong>Количество:</strong> ${order.quantity} ${order.service_type === 'water' ? 'куб.м' : 'выезд'}</div>
             <div><strong>Стоимость:</strong> ${order.price.toLocaleString()} ₽</div>
             <div><strong>Статус:</strong> <span class="status-${order.status}">${statusText}</span></div>
+            ${canCancel ? `<button class="cancel-order-btn" onclick="cancelCurrentOrder(${order.id})">❌ Отменить заказ</button>` : ''}
         </div>
     `;
     
@@ -584,6 +642,7 @@ async function loadOrderHistory() {
             const serviceName = order.service_type === 'water' ? 'Доставка воды' : 'Откачка септика';
             const orderDate = new Date(order.created_at).toLocaleDateString('ru-RU');
             const statusText = getOrderStatusText(order.status);
+            const canCancel = canCancelOrder(order);
             
             historyHtml += `
                 <div class="order-history-item">
@@ -598,6 +657,7 @@ async function loadOrderHistory() {
                         <div><strong>Количество:</strong> ${order.quantity} ${order.service_type === 'water' ? 'куб.м' : 'выезд'}</div>
                         <div><strong>Стоимость:</strong> ${order.price.toLocaleString()} ₽</div>
                         <div><strong>Статус:</strong> <span class="status-${order.status}">${statusText}</span></div>
+                        ${canCancel ? `<button class="cancel-order-btn" onclick="cancelOrderFromHistory(${order.id})">❌ Отменить</button>` : ''}
                     </div>
                 </div>
             `;
@@ -621,6 +681,54 @@ function getOrderStatusText(status) {
         'cancelled': 'Отменен'
     };
     return statusMap[status] || 'Обрабатывается';
+}
+
+function canCancelOrder(order) {
+    // Можно отменить только если заказ не выполняется
+    if (order.status === 'in_progress' || order.status === 'completed' || order.status === 'cancelled') {
+        return false;
+    }
+    
+    // Проверяем, осталось ли больше 3 часов до выполнения
+    const now = new Date();
+    const orderDateTime = new Date(order.delivery_date + 'T' + order.delivery_time);
+    const timeDiff = orderDateTime.getTime() - now.getTime();
+    const hoursLeft = timeDiff / (1000 * 60 * 60);
+    
+    return hoursLeft >= 3;
+}
+
+async function cancelCurrentOrder(orderId) {
+    const confirmCancel = confirm('Вы уверены, что хотите отменить заказ?');
+    
+    if (!confirmCancel) return;
+    
+    try {
+        const { error } = await supabaseClient
+            .from('orders')
+            .update({ 
+                status: 'cancelled',
+                updated_at: new Date().toISOString()
+            })
+            .eq('id', orderId);
+
+        if (error) throw error;
+
+        alert('Заказ успешно отменен!');
+        
+        // Обновляем отображение
+        loadCurrentOrder();
+        
+    } catch (error) {
+        console.error('Ошибка отмены заказа:', error);
+        alert('Ошибка при отмене заказа. Попробуйте еще раз.');
+    }
+}
+
+async function cancelOrderFromHistory(orderId) {
+    await cancelCurrentOrder(orderId);
+    // Обновляем историю
+    loadOrderHistory();
 }
 
 async function loginDriver(e) {

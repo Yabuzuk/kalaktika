@@ -11,14 +11,78 @@ document.addEventListener('DOMContentLoaded', function() {
     setupEventListeners();
     loadOrders();
     
-    // Автообновление каждые 30 секунд
-    setInterval(loadOrders, 30000);
+    // Подписка на изменения заказов
+    subscribeToDriverOrderUpdates();
     
     // Проверка напоминаний каждую минуту
     notificationInterval = setInterval(checkReminders, 60000);
     
     // Инициализация календаря
     initCalendar();
+}
+
+function subscribeToDriverOrderUpdates() {
+    // Подписка на все изменения заказов
+    supabaseClient
+        .channel('driver-orders')
+        .on('postgres_changes', {
+            event: '*',
+            schema: 'public',
+            table: 'orders'
+        }, (payload) => {
+            console.log('Изменение заказа для водителя:', payload);
+            
+            // Обновляем данные
+            loadOrders();
+            
+            // Показываем уведомление о новом заказе
+            if (payload.eventType === 'INSERT') {
+                showDriverNotification('Новый заказ поступил!', 'info');
+            }
+        })
+        .subscribe();
+}
+
+function showDriverNotification(message, type = 'info') {
+    let container = document.querySelector('.notifications');
+    if (!container) {
+        container = document.createElement('div');
+        container.className = 'notifications';
+        container.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 10000;
+        `;
+        document.body.appendChild(container);
+    }
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.style.cssText = `
+        background: #667eea;
+        color: white;
+        padding: 15px 20px;
+        border-radius: 8px;
+        margin-bottom: 10px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        animation: slideIn 0.3s ease;
+    `;
+    
+    if (type === 'warning') {
+        notification.style.background = '#ffc107';
+        notification.style.color = '#333';
+    } else if (type === 'error') {
+        notification.style.background = '#dc3545';
+    }
+    
+    notification.textContent = message;
+    container.appendChild(notification);
+    
+    // Удаляем через 4 секунды
+    setTimeout(() => {
+        notification.remove();
+    }, 4000);
 });
 
 function initializeDriver() {
