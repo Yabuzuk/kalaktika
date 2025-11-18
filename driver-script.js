@@ -6,8 +6,8 @@ let currentDate = new Date();
 let notificationInterval = null;
 
 // Инициализация при загрузке страницы
-document.addEventListener('DOMContentLoaded', function() {
-    initializeDriver();
+document.addEventListener('DOMContentLoaded', async function() {
+    await initializeDriver();
     setupEventListeners();
     loadOrders();
     
@@ -97,13 +97,48 @@ function showDriverNotification(message, type = 'info') {
     }, 4000);
 }
 
-function initializeDriver() {
+async function initializeDriver() {
     // Проверяем авторизацию водителя
-    driverId = localStorage.getItem('driverId') || 'driver_' + Date.now();
+    driverId = localStorage.getItem('driverId');
     const driverName = localStorage.getItem('driverName') || 'Водитель';
     
-    document.getElementById('driverName').textContent = driverName;
-    localStorage.setItem('driverId', driverId);
+    if (!driverId) {
+        window.location.href = 'driver-login.html';
+        return;
+    }
+    
+    // Проверяем статус водителя
+    try {
+        const { data: driver, error } = await supabaseClient
+            .from('drivers')
+            .select('status, full_name')
+            .eq('id', driverId)
+            .single();
+            
+        if (error || !driver) {
+            alert('Водитель не найден');
+            logout();
+            return;
+        }
+        
+        if (driver.status === 'blocked') {
+            alert('Ваш аккаунт заблокирован. Обратитесь к администратору.');
+            logout();
+            return;
+        }
+        
+        if (driver.status === 'pending') {
+            alert('Ваш аккаунт ожидает активации администратором.');
+            logout();
+            return;
+        }
+        
+        document.getElementById('driverName').textContent = driver.full_name;
+        
+    } catch (error) {
+        console.error('Ошибка проверки статуса:', error);
+        logout();
+    }
 }
 
 function setupEventListeners() {
@@ -287,6 +322,25 @@ function getActionButtons(order) {
 
 async function updateOrderStatus(orderId, newStatus) {
     try {
+        // Проверяем статус водителя перед принятием заказа
+        if (newStatus === 'confirmed') {
+            const { data: driver, error: driverError } = await supabaseClient
+                .from('drivers')
+                .select('status')
+                .eq('id', driverId)
+                .single();
+                
+            if (driverError || !driver) {
+                alert('Ошибка проверки статуса водителя');
+                return;
+            }
+            
+            if (driver.status !== 'active') {
+                alert('Вы не можете принимать заказы. Обратитесь к администратору.');
+                return;
+            }
+        }
+        
         const updateData = { 
             status: newStatus,
             updated_at: new Date().toISOString()

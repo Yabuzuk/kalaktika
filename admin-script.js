@@ -3,10 +3,16 @@ let orders = [];
 let currentFilter = 'all';
 
 document.addEventListener('DOMContentLoaded', function() {
+    // Проверяем авторизацию
+    if (!localStorage.getItem('adminToken')) {
+        window.location.href = 'admin-login.html';
+        return;
+    }
+    
     loadData();
     setupEventListeners();
     subscribeToAdminUpdates();
-}
+});
 
 function subscribeToAdminUpdates() {
     // Подписка на изменения заказов
@@ -32,7 +38,7 @@ function subscribeToAdminUpdates() {
             loadData();
         })
         .subscribe();
-});
+}
 
 function setupEventListeners() {
     // Фильтры водителей
@@ -51,14 +57,24 @@ function setupEventListeners() {
 
 async function loadData() {
     try {
+        console.log('Загружаем данные для админ-панели...');
+        
+        // Проверяем подключение к Supabase
+        console.log('Supabase URL:', supabaseClient.supabaseUrl);
+        
         // Загружаем водителей
+        console.log('Запрашиваем водителей...');
         const { data: driversData, error: driversError } = await supabaseClient
             .from('drivers')
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (driversError) throw driversError;
+        if (driversError) {
+            console.error('Ошибка загрузки водителей:', driversError);
+            alert('Ошибка загрузки водителей: ' + driversError.message);
+        }
         drivers = driversData || [];
+        console.log('Загружено водителей:', drivers.length, drivers);
 
         // Загружаем заказы
         const { data: ordersData, error: ordersError } = await supabaseClient
@@ -66,15 +82,19 @@ async function loadData() {
             .select('*')
             .order('created_at', { ascending: false });
 
-        if (ordersError) throw ordersError;
+        if (ordersError) {
+            console.error('Ошибка загрузки заказов:', ordersError);
+        }
         orders = ordersData || [];
+        console.log('Загружено заказов:', orders.length);
 
         renderDrivers();
         renderRecentOrders();
         updateStats();
 
     } catch (error) {
-        console.error('Ошибка загрузки данных:', error);
+        console.error('Критическая ошибка загрузки данных:', error);
+        alert('Ошибка загрузки данных. Проверьте консоль.');
     }
 }
 
@@ -230,5 +250,6 @@ function updateStats() {
 }
 
 function logout() {
+    localStorage.removeItem('adminToken');
     window.location.href = 'admin-login.html';
 }
