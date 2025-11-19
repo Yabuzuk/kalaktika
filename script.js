@@ -325,6 +325,9 @@ function setupEventListeners() {
     
     // Запрашиваем разрешение на уведомления
     setTimeout(requestNotificationPermission, 2000);
+    
+    // Настраиваем фоновую синхронизацию
+    setupBackgroundSync();
 
 
     
@@ -1408,4 +1411,31 @@ function checkInstallStatus() {
         
         setTimeout(() => notification.remove(), 3000);
     });
+}
+
+// Настройка фоновой синхронизации
+function setupBackgroundSync() {
+    if ('serviceWorker' in navigator && 'sync' in window.ServiceWorkerRegistration.prototype) {
+        navigator.serviceWorker.ready.then(registration => {
+            // Регистрируем фоновую синхронизацию
+            return registration.sync.register('background-sync');
+        }).then(() => {
+            console.log('Фоновая синхронизация зарегистрирована');
+        }).catch(error => {
+            console.log('Ошибка регистрации фоновой синхронизации:', error);
+        });
+    }
+    
+    // Периодическая синхронизация (только для установленных PWA)
+    if ('serviceWorker' in navigator && 'periodicSync' in window.ServiceWorkerRegistration.prototype) {
+        navigator.serviceWorker.ready.then(registration => {
+            return registration.periodicSync.register('check-orders', {
+                minInterval: 60000 // Проверяем каждую минуту
+            });
+        }).then(() => {
+            console.log('Периодическая синхронизация зарегистрирована');
+        }).catch(error => {
+            console.log('Периодическая синхронизация не поддерживается:', error);
+        });
+    }
 }

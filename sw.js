@@ -151,11 +151,42 @@ async function checkForNewOrders() {
       lastOrderId = data.id;
     }
     
-    // Проверяем новые заказы (упрощенная версия без Supabase в SW)
-    // В реальном приложении здесь был бы запрос к API
+    // Проверяем новые заказы через Supabase REST API
+    const response = await fetch('https://xflzsoruvmodqjsfvrwr.supabase.co/rest/v1/orders?select=id,service_type,user_name,created_at&order=id.desc&limit=1', {
+      headers: {
+        'apikey': 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmbHpzb3J1dm1vZHFqc2Z2cndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MzAwMDIsImV4cCI6MjA3OTAwNjAwMn0.CY5Za3yO0QH1x4ChjwvMVn1O9WmZIWF3QkfWoHF7WvU',
+        'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmbHpzb3J1dm1vZHFqc2Z2cndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MzAwMDIsImV4cCI6MjA3OTAwNjAwMn0.CY5Za3yO0QH1x4ChjwvMVn1O9WmZIWF3QkfWoHF7WvU'
+      }
+    });
     
-    // Сохраняем новый последний ID
-    await cache.put('/last-order-id', new Response(JSON.stringify({ id: lastOrderId })));
+    if (response.ok) {
+      const orders = await response.json();
+      
+      if (orders.length > 0) {
+        const latestOrder = orders[0];
+        
+        // Если есть новый заказ
+        if (latestOrder.id > lastOrderId) {
+          const serviceIcon = latestOrder.service_type === 'water' ? '💧' : '🚝';
+          const serviceName = latestOrder.service_type === 'water' ? 'Доставка воды' : 'Откачка септика';
+          
+          // Показываем уведомление
+          await self.registration.showNotification(`${serviceIcon} Новый заказ!`, {
+            body: `${serviceName} от ${latestOrder.user_name}`,
+            icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+            badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+            vibrate: [300, 100, 300, 100, 300],
+            silent: false,
+            requireInteraction: true,
+            tag: `new-order-${latestOrder.id}`,
+            data: { orderId: latestOrder.id, url: '/driver.html' }
+          });
+          
+          // Сохраняем новый последний ID
+          await cache.put('/last-order-id', new Response(JSON.stringify({ id: latestOrder.id })));
+        }
+      }
+    }
     
   } catch (error) {
     console.error('Ошибка фоновой синхронизации:', error);
