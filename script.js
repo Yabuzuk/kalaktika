@@ -17,8 +17,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function checkAuthentication() {
     const userPhone = localStorage.getItem('userPhone');
+    const isAuthenticated = localStorage.getItem('isAuthenticated');
     
-    if (!userPhone) {
+    if (!userPhone || !isAuthenticated) {
+        console.log('Нет данных авторизации, перенаправляем на вход');
         window.location.href = 'login.html';
         return;
     }

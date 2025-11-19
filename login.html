@@ -183,11 +183,19 @@
                         .eq('id', user.id);
                 }
                 
-                // Сохраняем только телефон для проверки аутентификации
+                // Сохраняем данные авторизации
                 localStorage.setItem('userPhone', phone);
+                localStorage.setItem('userName', name);
+                localStorage.setItem('isAuthenticated', 'true');
                 
-                // Переходим на главную страницу
-                window.location.href = 'index.html';
+                // Дополнительная проверка сохранения
+                setTimeout(() => {
+                    if (localStorage.getItem('userPhone') === phone) {
+                        window.location.href = 'index.html';
+                    } else {
+                        alert('Ошибка сохранения данных. Попробуйте еще раз.');
+                    }
+                }, 200);
                 
             } catch (error) {
                 console.error('Ошибка авторизации:', error);
