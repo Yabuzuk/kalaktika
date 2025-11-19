@@ -1123,21 +1123,37 @@ function navigateToOrder(address) {
 let driverDeferredPrompt;
 
 function setupDriverPWA() {
+    console.log('Настройка PWA для водителя...');
+    
+    // Проверяем, установлено ли приложение
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('CRM водителя уже установлено');
+        return;
+    }
+    
     // Слушаем событие beforeinstallprompt
     window.addEventListener('beforeinstallprompt', (e) => {
+        console.log('Событие beforeinstallprompt получено');
         e.preventDefault();
         driverDeferredPrompt = e;
         showInstallButton();
     });
     
-    // Проверяем, установлено ли приложение
-    if (window.matchMedia('(display-mode: standalone)').matches) {
-        console.log('CRM водителя уже установлено');
-    }
+    // Показываем кнопку через 3 секунды, если событие не пришло
+    setTimeout(() => {
+        if (!driverDeferredPrompt && !document.getElementById('driverInstallBtn')) {
+            console.log('Показываем кнопку установки без события');
+            showInstallButton();
+        }
+    }, 3000);
 }
 
 function showInstallButton() {
+    // Проверяем, нет ли уже кнопки
+    if (document.getElementById('driverInstallBtn')) return;
+    
     const installBtn = document.createElement('button');
+    installBtn.id = 'driverInstallBtn';
     installBtn.textContent = '📱 Установить CRM';
     installBtn.style.cssText = `
         position: fixed;
@@ -1152,6 +1168,7 @@ function showInstallButton() {
         cursor: pointer;
         z-index: 1000;
         box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+        animation: pulse 2s infinite;
     `;
     
     installBtn.addEventListener('click', async () => {
@@ -1165,8 +1182,11 @@ function showInstallButton() {
             }
             
             driverDeferredPrompt = null;
+        } else {
+            alert('Для установки CRM:\n\n1. Откройте меню браузера\n2. Найдите "Установить приложение"\n3. Или "На главный экран"');
         }
     });
     
     document.body.appendChild(installBtn);
+    console.log('Кнопка установки CRM добавлена');
 }
