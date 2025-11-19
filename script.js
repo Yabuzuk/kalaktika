@@ -1293,7 +1293,11 @@ async function requestNotificationPermission() {
 function showNotificationButton() {
     if (Notification.permission === 'granted') return;
     
+    // Проверяем, нет ли уже кнопки
+    if (document.getElementById('notificationBtn')) return;
+    
     const notifBtn = document.createElement('button');
+    notifBtn.id = 'notificationBtn';
     notifBtn.textContent = '🔔 Включить уведомления';
     notifBtn.style.cssText = `
         position: fixed;
@@ -1309,21 +1313,40 @@ function showNotificationButton() {
         cursor: pointer;
         z-index: 10000;
         animation: pulse 2s infinite;
+        -webkit-tap-highlight-color: transparent;
     `;
     
-    notifBtn.addEventListener('click', async () => {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            notifBtn.remove();
-            // Тестовое уведомление
-            showPushNotification('✅ Уведомления включены!', {
-                body: 'Теперь вы будете получать уведомления о заказах',
-                tag: 'notification-enabled'
-            });
+    // Добавляем обработчики для мобильных
+    const handleClick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Клик по кнопке уведомлений');
+        
+        try {
+            const permission = await Notification.requestPermission();
+            console.log('Результат запроса:', permission);
+            
+            if (permission === 'granted') {
+                notifBtn.remove();
+                showPushNotification('✅ Уведомления включены!', {
+                    body: 'Теперь вы будете получать уведомления о заказах',
+                    tag: 'notification-enabled'
+                });
+            } else {
+                alert('Для получения уведомлений необходимо разрешить их в настройках браузера');
+            }
+        } catch (error) {
+            console.error('Ошибка запроса уведомлений:', error);
         }
-    });
+    };
+    
+    // Добавляем обработчики для всех типов событий
+    notifBtn.addEventListener('click', handleClick);
+    notifBtn.addEventListener('touchend', handleClick, { passive: false });
     
     document.body.appendChild(notifBtn);
+    console.log('Кнопка уведомлений добавлена');
 }
 
 function showPushNotification(title, options = {}) {
