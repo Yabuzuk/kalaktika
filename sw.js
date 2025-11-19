@@ -81,17 +81,25 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   
   event.waitUntil(
-    clients.matchAll({ type: 'window' }).then(clientList => {
-      // Если приложение уже открыто, фокусируемся на нём
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then(clientList => {
+      const baseUrl = self.location.origin;
+      
+      // Проверяем, открыто ли приложение
       for (let client of clientList) {
-        if (client.url === '/' && 'focus' in client) {
+        if (client.url.includes('driver.html') || client.url.includes('index.html') || client.url === baseUrl + '/') {
           return client.focus();
         }
       }
-      // Иначе открываем новое окно
-      if (clients.openWindow) {
-        return clients.openWindow('/');
+      
+      // Определяем, какую страницу открывать
+      let targetUrl = baseUrl + '/index.html';
+      
+      // Если уведомление для водителя
+      if (event.notification.tag && event.notification.tag.includes('driver')) {
+        targetUrl = baseUrl + '/driver.html';
       }
+      
+      return clients.openWindow(targetUrl);
     })
   );
 });
