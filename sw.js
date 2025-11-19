@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kalaktika-v2';
+const CACHE_NAME = 'kalaktika-v3';
 const urlsToCache = [
   './',
   './index.html',
@@ -7,6 +7,7 @@ const urlsToCache = [
   './script.js',
   './config.js',
   './manifest.json',
+  './driver-manifest.json',
   './admin.html',
   './admin-styles.css',
   './admin-script.js',

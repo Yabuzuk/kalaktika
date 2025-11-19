@@ -14,6 +14,9 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Запрашиваем разрешение на уведомления
     requestNotificationPermission();
     
+    // PWA установка для водителей
+    setupDriverPWA();
+    
     // Подписка на изменения заказов
     subscribeToDriverOrderUpdates();
     
@@ -979,4 +982,56 @@ function navigateToOrder(address) {
         const mapUrl = `https://yandex.ru/maps/?text=${encodeURIComponent(address)}&mode=search`;
         window.open(mapUrl, '_blank');
     }
+}
+
+// PWA для водителей
+let driverDeferredPrompt;
+
+function setupDriverPWA() {
+    // Слушаем событие beforeinstallprompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        driverDeferredPrompt = e;
+        showInstallButton();
+    });
+    
+    // Проверяем, установлено ли приложение
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        console.log('CRM водителя уже установлено');
+    }
+}
+
+function showInstallButton() {
+    const installBtn = document.createElement('button');
+    installBtn.textContent = '📱 Установить CRM';
+    installBtn.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        border: none;
+        padding: 12px 20px;
+        border-radius: 25px;
+        font-weight: 600;
+        cursor: pointer;
+        z-index: 1000;
+        box-shadow: 0 4px 15px rgba(40, 167, 69, 0.3);
+    `;
+    
+    installBtn.addEventListener('click', async () => {
+        if (driverDeferredPrompt) {
+            driverDeferredPrompt.prompt();
+            const { outcome } = await driverDeferredPrompt.userChoice;
+            
+            if (outcome === 'accepted') {
+                console.log('CRM водителя установлено');
+                installBtn.remove();
+            }
+            
+            driverDeferredPrompt = null;
+        }
+    });
+    
+    document.body.appendChild(installBtn);
 }
