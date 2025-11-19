@@ -311,6 +311,9 @@ function setupEventListeners() {
     
     // PWA установка
     setupPWAInstall();
+    
+    // Проверяем состояние установки при загрузке
+    checkInstallStatus();
 
 
     
@@ -1013,27 +1016,70 @@ function logout() {
 
 // PWA функциональность
 let deferredPrompt;
+let isInstallable = false;
 
 function setupPWAInstall() {
     const installBtn = document.getElementById('installBtn');
+    
+    // Проверяем, установлено ли уже приложение
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+        installBtn.style.display = 'none';
+        return;
+    }
     
     // Слушаем событие beforeinstallprompt
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
+        isInstallable = true;
+        installBtn.style.display = 'flex';
+        console.log('PWA готово к установке');
     });
     
     // Обработчик кнопки установки
     installBtn.addEventListener('click', async () => {
-        if (deferredPrompt) {
-            deferredPrompt.prompt();
-            const { outcome } = await deferredPrompt.userChoice;
-            console.log('PWA установка:', outcome);
-            deferredPrompt = null;
+        if (deferredPrompt && isInstallable) {
+            try {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    console.log('PWA установлено');
+                    installBtn.style.display = 'none';
+                } else {
+                    console.log('PWA установка отменена');
+                }
+                
+                deferredPrompt = null;
+                isInstallable = false;
+            } catch (error) {
+                console.error('Ошибка установки PWA:', error);
+                showManualInstallInstructions();
+            }
         } else {
-            alert('Для установки:\n\n1. Откройте меню браузера (…)\n2. Найдите "Установить приложение"\n3. Или "На главный экран"');
+            showManualInstallInstructions();
         }
     });
+    
+    // Скрываем кнопку по умолчанию, показываем только когда доступна установка
+    installBtn.style.display = 'none';
+}
+
+function showManualInstallInstructions() {
+    const isAndroid = /Android/i.test(navigator.userAgent);
+    const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+    
+    let instructions = '';
+    
+    if (isAndroid) {
+        instructions = 'Для установки на Android:\n\n1. Нажмите меню браузера (⋮)\n2. Выберите "Установить приложение"\n3. Или "Добавить на главный экран"';
+    } else if (isIOS) {
+        instructions = 'Для установки на iPhone/iPad:\n\n1. Нажмите кнопку "Поделиться" (□↗)\n2. Выберите "На экран Домой"\n3. Нажмите "Добавить"';
+    } else {
+        instructions = 'Для установки:\n\n1. Откройте меню браузера\n2. Найдите "Установить приложение"\n3. Или "Добавить на рабочий стол"';
+    }
+    
+    alert(instructions);
 }
 
 // Утилита для debounce
@@ -1158,3 +1204,37 @@ window.addEventListener('offline', function() {
     console.log('Соединение потеряно');
     showOfflineMessage();
 });
+
+// Проверка статуса установки
+function checkInstallStatus() {
+    // Проверяем, запущено ли как PWA
+    if (window.matchMedia('(display-mode: standalone)').matches || 
+        window.navigator.standalone === true) {
+        console.log('Приложение уже установлено');
+        document.getElementById('installBtn').style.display = 'none';
+    }
+    
+    // Отслеживаем событие успешной установки
+    window.addEventListener('appinstalled', () => {
+        console.log('PWA успешно установлено');
+        document.getElementById('installBtn').style.display = 'none';
+        
+        // Показываем уведомление
+        const notification = document.createElement('div');
+        notification.style.cssText = `
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: #28a745;
+            color: white;
+            padding: 15px 20px;
+            border-radius: 8px;
+            z-index: 10000;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        `;
+        notification.textContent = '✅ Приложение установлено!';
+        document.body.appendChild(notification);
+        
+        setTimeout(() => notification.remove(), 3000);
+    });
+}
