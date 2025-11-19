@@ -2,13 +2,16 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Вход - Водовозка и Септик</title>
     
     <!-- PWA манифест -->
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#667eea">
     <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="format-detection" content="telephone=no">
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <style>
@@ -25,6 +28,10 @@
             display: flex;
             align-items: center;
             justify-content: center;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -webkit-tap-highlight-color: transparent;
+            touch-action: manipulation;
         }
 
         .login-container {
@@ -70,6 +77,8 @@
             border-radius: 10px;
             font-size: 16px;
             transition: border-color 0.3s;
+            -webkit-appearance: none;
+            -webkit-border-radius: 10px;
         }
 
         .form-group input:focus {
@@ -108,6 +117,22 @@
 
         .register-link a:hover {
             text-decoration: underline;
+        }
+        
+        @media (max-width: 768px) {
+            .login-container {
+                margin: 20px;
+                padding: 30px 20px;
+                max-width: none;
+            }
+            
+            .form-group input {
+                font-size: 16px; /* Предотвращает зум на iOS */
+            }
+            
+            .login-btn {
+                -webkit-tap-highlight-color: transparent;
+            }
         }
 
 

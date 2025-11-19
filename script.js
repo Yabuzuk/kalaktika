@@ -23,6 +23,9 @@ async function checkAuthentication() {
         return;
     }
     
+    // Показываем индикатор загрузки
+    showLoadingIndicator();
+    
     try {
         // Проверяем пользователя в базе данных
         const { data: user, error } = await supabaseClient
@@ -45,8 +48,17 @@ async function checkAuthentication() {
         
     } catch (error) {
         console.error('Ошибка проверки аутентификации:', error);
+        
+        // Проверяем, есть ли сеть
+        if (!navigator.onLine) {
+            showOfflineMessage();
+            return;
+        }
+        
         localStorage.clear();
         window.location.href = 'login.html';
+    } finally {
+        hideLoadingIndicator();
     }
 }
 
@@ -65,16 +77,23 @@ function initializeApp() {
     // Подписываемся на изменения заказов
     subscribeToOrderUpdates();
     
-    // Инициализируем Яндекс карты
-    if (typeof ymaps !== 'undefined') {
-        ymaps.ready(() => {
-            initMaps();
-            console.log('Автодополнение адресов активировано');
-        });
-    } else {
-        console.log('Яндекс.Карты API не загружен, работаем без карт');
-        hideMapFeatures();
-    }
+    // Инициализируем Яндекс карты с задержкой для мобильных
+    setTimeout(() => {
+        if (typeof ymaps !== 'undefined') {
+            ymaps.ready(() => {
+                try {
+                    initMaps();
+                    console.log('Автодополнение адресов активировано');
+                } catch (error) {
+                    console.error('Ошибка инициализации карт:', error);
+                    hideMapFeatures();
+                }
+            });
+        } else {
+            console.log('Яндекс.Карты API не загружен, работаем без карт');
+            hideMapFeatures();
+        }
+    }, 500);
 }
 
 function subscribeToOrderUpdates() {
@@ -196,11 +215,16 @@ function initMaps() {
             return;
         }
 
-        // Карта в модальном окне
+        // Карта в модальном окне с мобильными настройками
         modalMap = new ymaps.Map('modalMap', {
             center: [62.5354, 113.9607], // Мирный, Якутия
             zoom: 13,
-            controls: ['zoomControl', 'searchControl']
+            controls: ['zoomControl', 'searchControl'],
+            behaviors: ['default', 'scrollZoom']
+        }, {
+            // Мобильные настройки
+            suppressMapOpenBlock: true,
+            yandexMapDisablePoiInteractivity: true
         });
         
         // Ограничиваем область поиска городом Мирный
@@ -209,8 +233,9 @@ function initMaps() {
             strictBounds: true
         });
 
-        // Обработчик клика по карте в модальном окне
-        modalMap.events.add('click', function(e) {
+        // Обработчик клика/касания по карте
+        modalMap.events.add(['click', 'touchend'], function(e) {
+            e.preventDefault();
             const coords = e.get('coords');
             selectLocationOnMap(coords);
         });
@@ -261,11 +286,11 @@ function setupEventListeners() {
     document.getElementById('closeMenu').addEventListener('click', closeSideMenu);
     document.getElementById('overlay').addEventListener('click', closeSideMenu);
     
-    // Меню пункты
-    document.getElementById('profileBtn').addEventListener('click', openProfileModal);
-    document.getElementById('historyBtn').addEventListener('click', openHistoryModal);
-    document.getElementById('becomeDriverBtn').addEventListener('click', openDriverModal);
-    document.getElementById('logoutBtn').addEventListener('click', logout);
+    // Меню пункты с поддержкой touch
+    addTouchSupport('profileBtn', openProfileModal);
+    addTouchSupport('historyBtn', openHistoryModal);
+    addTouchSupport('becomeDriverBtn', openDriverModal);
+    addTouchSupport('logoutBtn', logout);
     
     // Модальные окна
     document.querySelectorAll('.modal .close').forEach(btn => {
@@ -402,13 +427,25 @@ async function getOccupiedTimeSlots(date) {
 
 function openMapModal() {
     document.getElementById('mapModal').style.display = 'block';
+    
+    // Предотвращаем скролл фона на мобильных
+    document.body.style.overflow = 'hidden';
+    
     setTimeout(() => {
-        modalMap.container.fitToViewport();
-    }, 100);
+        if (modalMap && modalMap.container) {
+            try {
+                modalMap.container.fitToViewport();
+            } catch (error) {
+                console.log('Ошибка при обновлении карты:', error);
+            }
+        }
+    }, 300);
 }
 
 function closeMapModal() {
     document.getElementById('mapModal').style.display = 'none';
+    // Возвращаем скролл фона
+    document.body.style.overflow = '';
 }
 
 function selectLocationOnMap(coords) {
@@ -1011,3 +1048,113 @@ function debounce(func, wait) {
         timeout = setTimeout(later, wait);
     };
 }
+
+// Добавляем поддержку touch событий для мобильных устройств
+function addTouchSupport(elementId, callback) {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    
+    let touchStartTime = 0;
+    
+    element.addEventListener('touchstart', function(e) {
+        touchStartTime = Date.now();
+    }, { passive: true });
+    
+    element.addEventListener('touchend', function(e) {
+        const touchDuration = Date.now() - touchStartTime;
+        if (touchDuration < 500) { // Короткое касание
+            e.preventDefault();
+            callback();
+        }
+    }, { passive: false });
+    
+    // Оставляем обычный click для десктопа
+    element.addEventListener('click', callback);
+}
+
+// Проверка мобильного устройства
+function isMobileDevice() {
+    return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+           ('ontouchstart' in window) ||
+           (navigator.maxTouchPoints > 0);
+}
+
+// Оптимизация для мобильных устройств
+if (isMobileDevice()) {
+    // Отключаем 300ms задержку на клики
+    document.addEventListener('DOMContentLoaded', function() {
+        const meta = document.createElement('meta');
+        meta.name = 'viewport';
+        meta.content = 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no';
+        document.head.appendChild(meta);
+    });
+}
+
+// Индикатор загрузки
+function showLoadingIndicator() {
+    const loader = document.createElement('div');
+    loader.id = 'loadingIndicator';
+    loader.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(255,255,255,0.9);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        font-size: 18px;
+        color: #667eea;
+    `;
+    loader.innerHTML = '🚛 Загрузка...';
+    document.body.appendChild(loader);
+}
+
+function hideLoadingIndicator() {
+    const loader = document.getElementById('loadingIndicator');
+    if (loader) {
+        loader.remove();
+    }
+}
+
+// Офлайн режим
+function showOfflineMessage() {
+    const message = document.createElement('div');
+    message.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        background: #ff4757;
+        color: white;
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        z-index: 10000;
+        font-weight: 600;
+    `;
+    message.innerHTML = '⚠️ Нет соединения с интернетом';
+    document.body.appendChild(message);
+    
+    // Проверяем соединение каждые 5 секунд
+    const checkConnection = setInterval(() => {
+        if (navigator.onLine) {
+            clearInterval(checkConnection);
+            message.remove();
+            location.reload();
+        }
+    }, 5000);
+}
+
+// Отслеживание состояния сети
+window.addEventListener('online', function() {
+    console.log('Соединение восстановлено');
+    location.reload();
+});
+
+window.addEventListener('offline', function() {
+    console.log('Соединение потеряно');
+    showOfflineMessage();
+});
