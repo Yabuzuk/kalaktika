@@ -1090,17 +1090,73 @@ function showManualInstallInstructions() {
     const isAndroid = /Android/i.test(navigator.userAgent);
     const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
     
-    let instructions = '';
+    // Показываем визуальную инструкцию
+    const modal = document.createElement('div');
+    modal.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.8);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+    `;
+    
+    let content = '';
     
     if (isAndroid) {
-        instructions = 'Для установки на Android:\n\n1. Нажмите меню браузера (⋮)\n2. Выберите "Установить приложение"\n3. Или "Добавить на главный экран"';
+        content = `
+            <div style="background: white; border-radius: 15px; padding: 30px; max-width: 400px; text-align: center;">
+                <h3 style="margin-bottom: 20px; color: #333;">📱 Установка на Android</h3>
+                <div style="margin-bottom: 20px; text-align: left; line-height: 1.6;">
+                    <p><strong>1.</strong> Нажмите меню браузера <span style="font-size: 18px;">⋮</span></p>
+                    <p><strong>2.</strong> Найдите "Установить приложение"</p>
+                    <p><strong>3.</strong> Нажмите "Установить"</p>
+                    <p style="color: #28a745; font-weight: 600;">✨ Приложение появится на рабочем столе!</p>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" style="background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer;">Понятно</button>
+            </div>
+        `;
     } else if (isIOS) {
-        instructions = 'Для установки на iPhone/iPad:\n\n1. Нажмите кнопку "Поделиться" (□↗)\n2. Выберите "На экран Домой"\n3. Нажмите "Добавить"';
+        content = `
+            <div style="background: white; border-radius: 15px; padding: 30px; max-width: 400px; text-align: center;">
+                <h3 style="margin-bottom: 20px; color: #333;">📱 Установка на iPhone/iPad</h3>
+                <div style="margin-bottom: 20px; text-align: left; line-height: 1.6;">
+                    <p><strong>1.</strong> Нажмите кнопку "Поделиться" <span style="font-size: 18px;">□↗</span></p>
+                    <p><strong>2.</strong> Выберите "На экран Домой"</p>
+                    <p><strong>3.</strong> Нажмите "Добавить"</p>
+                    <p style="color: #28a745; font-weight: 600;">✨ Приложение появится на рабочем столе!</p>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" style="background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer;">Понятно</button>
+            </div>
+        `;
     } else {
-        instructions = 'Для установки:\n\n1. Откройте меню браузера\n2. Найдите "Установить приложение"\n3. Или "Добавить на рабочий стол"';
+        content = `
+            <div style="background: white; border-radius: 15px; padding: 30px; max-width: 400px; text-align: center;">
+                <h3 style="margin-bottom: 20px; color: #333;">📱 Установка приложения</h3>
+                <div style="margin-bottom: 20px; text-align: left; line-height: 1.6;">
+                    <p><strong>1.</strong> Откройте меню браузера</p>
+                    <p><strong>2.</strong> Найдите "Установить приложение"</p>
+                    <p><strong>3.</strong> Нажмите "Установить"</p>
+                </div>
+                <button onclick="this.parentElement.parentElement.remove()" style="background: #667eea; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer;">Понятно</button>
+            </div>
+        `;
     }
     
-    alert(instructions);
+    modal.innerHTML = content;
+    document.body.appendChild(modal);
+    
+    // Удаляем при клике на фон
+    modal.addEventListener('click', function(e) {
+        if (e.target === modal) {
+            modal.remove();
+        }
+    });
 }
 
 // Утилита для debounce
