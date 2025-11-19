@@ -104,6 +104,8 @@
         .register-link a:hover {
             text-decoration: underline;
         }
+
+
     </style>
 </head>
 <body>
@@ -189,10 +191,14 @@
             }
         });
 
+
+
         // Проверяем, авторизован ли уже пользователь
         if (localStorage.getItem('userPhone')) {
             window.location.href = 'index.html';
         }
+
+
 
         // Форматирование номера телефона
         document.getElementById('phone').addEventListener('input', function(e) {
@@ -210,6 +216,8 @@
                 e.target.value = formatted;
             }
         });
+
+
     </script>
 </body>
 </html>
