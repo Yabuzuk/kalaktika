@@ -124,3 +124,40 @@ self.addEventListener('push', event => {
     );
   }
 });
+
+// Фоновая синхронизация для проверки новых заказов
+self.addEventListener('sync', event => {
+  if (event.tag === 'background-sync') {
+    event.waitUntil(checkForNewOrders());
+  }
+});
+
+// Периодическая фоновая синхронизация (только для установленных PWA)
+self.addEventListener('periodicsync', event => {
+  if (event.tag === 'check-orders') {
+    event.waitUntil(checkForNewOrders());
+  }
+});
+
+async function checkForNewOrders() {
+  try {
+    // Получаем последний ID заказа из кэша
+    const cache = await caches.open('orders-cache');
+    const lastOrderResponse = await cache.match('/last-order-id');
+    let lastOrderId = 0;
+    
+    if (lastOrderResponse) {
+      const data = await lastOrderResponse.json();
+      lastOrderId = data.id;
+    }
+    
+    // Проверяем новые заказы (упрощенная версия без Supabase в SW)
+    // В реальном приложении здесь был бы запрос к API
+    
+    // Сохраняем новый последний ID
+    await cache.put('/last-order-id', new Response(JSON.stringify({ id: lastOrderId })));
+    
+  } catch (error) {
+    console.error('Ошибка фоновой синхронизации:', error);
+  }
+}
