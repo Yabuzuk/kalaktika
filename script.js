@@ -125,6 +125,13 @@ function showOrderUpdateNotification(order) {
     const statusText = getOrderStatusText(order.status);
     const message = `Заказ #${order.id}: ${statusText}`;
     
+    // Push уведомление
+    showPushNotification('🚛 Обновление заказа', {
+        body: message,
+        tag: `order-${order.id}`,
+        requireInteraction: true
+    });
+    
     // Создаем уведомление
     const notification = document.createElement('div');
     notification.style.cssText = `
@@ -314,6 +321,9 @@ function setupEventListeners() {
     
     // Проверяем состояние установки при загрузке
     checkInstallStatus();
+    
+    // Запрашиваем разрешение на уведомления
+    setTimeout(requestNotificationPermission, 2000);
 
 
     
@@ -653,6 +663,13 @@ async function saveOrder(order) {
 function showOrderConfirmation(order) {
     const serviceText = order.service === 'water' ? 'Доставка воды' : 'Откачка септика';
     const quantityText = order.service === 'water' ? `${order.quantity} куб.м` : '1 выезд';
+    
+    // Push уведомление о создании заказа
+    showPushNotification('✅ Заказ создан!', {
+        body: `${serviceText} на ${order.date} в ${order.time}`,
+        tag: 'order-created',
+        requireInteraction: false
+    });
     
     alert(`Заказ создан!
     
@@ -1192,6 +1209,31 @@ function showOfflineMessage() {
             location.reload();
         }
     }, 5000);
+}
+
+// Push уведомления
+async function requestNotificationPermission() {
+    if ('Notification' in window && 'serviceWorker' in navigator) {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            console.log('Разрешение на уведомления получено');
+            return true;
+        }
+    }
+    return false;
+}
+
+function showPushNotification(title, options = {}) {
+    if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(title, {
+                icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+                badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+                vibrate: [200, 100, 200],
+                ...options
+            });
+        });
+    }
 }
 
 // Отслеживание состояния сети

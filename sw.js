@@ -74,3 +74,12 @@ self.addEventListener('activate', event => {
     })
   );
 });
+
+// Обработка кликов по уведомлениям
+self.addEventListener('notificationclick', event => {
+  event.notification.close();
+  
+  event.waitUntil(
+    clients.openWindow('/')
+  );
+});
