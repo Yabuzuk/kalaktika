@@ -743,9 +743,9 @@ body {
     
     .modal-content {
         width: 95%;
-        margin: 2% auto;
+        margin: 70px auto 20px auto;
         padding: 15px;
-        max-height: 95vh;
+        max-height: calc(100vh - 90px);
     }
     
     .side-menu {
