@@ -55,7 +55,14 @@ function subscribeToDriverOrderUpdates() {
             // Показываем уведомления
             if (payload.eventType === 'INSERT') {
                 playNotificationSound();
-                showBrowserNotification('Новый заказ!', 'Поступил новый заказ на выполнение');
+                
+                // Проверяем разрешение перед отправкой
+                if (Notification.permission === 'granted') {
+                    showBrowserNotification('Новый заказ!', 'Поступил новый заказ на выполнение');
+                } else {
+                    console.log('Нет разрешения на уведомления');
+                }
+                
                 showDriverNotification('Новый заказ поступил!', 'info');
             } else if (payload.eventType === 'UPDATE') {
                 const order = payload.new;
@@ -802,10 +809,17 @@ function playNotificationSound() {
 
 function showBrowserNotification(title, body) {
     console.log('Попытка показать уведомление:', title, body);
+    console.log('Статус разрешения:', Notification.permission);
     
-    // Push уведомление через Service Worker
-    if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+    if (Notification.permission !== 'granted') {
+        console.log('Нет разрешения на уведомления');
+        return;
+    }
+    
+    // Push уведомление через Service Worker (приоритет)
+    if ('serviceWorker' in navigator) {
         navigator.serviceWorker.ready.then(registration => {
+            console.log('Отправка через Service Worker');
             registration.showNotification(title, {
                 body: body,
                 icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
@@ -813,10 +827,38 @@ function showBrowserNotification(title, body) {
                 vibrate: [300, 100, 300, 100, 300],
                 silent: false,
                 requireInteraction: true,
-                tag: 'driver-notification'
+                tag: 'driver-notification-' + Date.now()
             });
+        }).catch(error => {
+            console.error('Ошибка Service Worker:', error);
+            // Фолбэк на обычное уведомление
+            fallbackNotification(title, body);
         });
+    } else {
+        fallbackNotification(title, body);
     }
+}
+
+function fallbackNotification(title, body) {
+    try {
+        console.log('Отправка обычного уведомления');
+        const notification = new Notification(title, {
+            body: body,
+            icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+            requireInteraction: true
+        });
+        
+        notification.onclick = function() {
+            window.focus();
+            notification.close();
+        };
+        
+        setTimeout(() => notification.close(), 8000);
+        
+    } catch (error) {
+        console.error('Ошибка создания уведомления:', error);
+    }
+}
     
     // Дублируем обычным уведомлением
     if (!('Notification' in window)) {
