@@ -860,7 +860,11 @@ async function requestNotificationPermission() {
 function showDriverNotificationButton() {
     if (Notification.permission === 'granted') return;
     
+    // Проверяем, нет ли уже кнопки
+    if (document.getElementById('driverNotificationBtn')) return;
+    
     const notifBtn = document.createElement('button');
+    notifBtn.id = 'driverNotificationBtn';
     notifBtn.textContent = '🔔 Включить уведомления';
     notifBtn.style.cssText = `
         position: fixed;
@@ -876,17 +880,35 @@ function showDriverNotificationButton() {
         cursor: pointer;
         z-index: 10000;
         animation: pulse 2s infinite;
+        -webkit-tap-highlight-color: transparent;
     `;
     
-    notifBtn.addEventListener('click', async () => {
-        const permission = await Notification.requestPermission();
-        if (permission === 'granted') {
-            notifBtn.remove();
-            showBrowserNotification('✅ Уведомления включены!', 'Теперь вы будете получать уведомления о новых заказах');
+    const handleClick = async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        
+        console.log('Клик по кнопке уведомлений водителя');
+        
+        try {
+            const permission = await Notification.requestPermission();
+            console.log('Результат запроса водителя:', permission);
+            
+            if (permission === 'granted') {
+                notifBtn.remove();
+                showBrowserNotification('✅ Уведомления включены!', 'Теперь вы будете получать уведомления о новых заказах');
+            } else {
+                alert('Для получения уведомлений о новых заказах необходимо разрешить их в настройках браузера');
+            }
+        } catch (error) {
+            console.error('Ошибка запроса уведомлений водителя:', error);
         }
-    });
+    };
+    
+    notifBtn.addEventListener('click', handleClick);
+    notifBtn.addEventListener('touchend', handleClick, { passive: false });
     
     document.body.appendChild(notifBtn);
+    console.log('Кнопка уведомлений водителя добавлена');
 }
 
 function playNotificationSound() {
