@@ -44,6 +44,14 @@ document.addEventListener('DOMContentLoaded', async function() {
         // Инициализация календаря
         initCalendar();
         
+        // Инициализация Realtime в Service Worker как альтернатива Periodic Sync
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.ready.then(registration => {
+                registration.active.postMessage({ type: 'INIT_REALTIME' });
+                console.log('Realtime инициализирован в Service Worker');
+            });
+        }
+        
     } catch (error) {
         console.error('Ошибка инициализации:', error);
         alert('Ошибка загрузки CRM. Перезагрузите страницу.');

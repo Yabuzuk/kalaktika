@@ -12,6 +12,14 @@ document.addEventListener('DOMContentLoaded', function() {
     loadData();
     setupEventListeners();
     subscribeToAdminUpdates();
+    
+    // Инициализация Realtime в Service Worker как альтернатива Periodic Sync
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.active.postMessage({ type: 'INIT_REALTIME' });
+            console.log('Realtime инициализирован в Service Worker для админа');
+        });
+    }
 });
 
 function subscribeToAdminUpdates() {

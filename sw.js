@@ -1,4 +1,4 @@
-const CACHE_NAME = 'kalaktika-v3';
+const CACHE_NAME = 'kalaktika-v4';
 const urlsToCache = [
   './',
   './index.html',
@@ -138,6 +138,85 @@ self.addEventListener('periodicsync', event => {
     event.waitUntil(checkForNewOrders());
   }
 });
+
+// Альтернативный механизм - проверка при активации
+self.addEventListener('message', event => {
+  if (event.data && event.data.type === 'CHECK_ORDERS') {
+    event.waitUntil(checkForNewOrders());
+  }
+  if (event.data && event.data.type === 'INIT_REALTIME') {
+    initRealtimeConnection();
+  }
+});
+
+// Supabase Realtime connection для альтернативы Periodic Sync
+let realtimeChannel = null;
+
+function initRealtimeConnection() {
+  try {
+    // Создаем WebSocket соединение с Supabase Realtime
+    const wsUrl = 'wss://xflzsoruvmodqjsfvrwr.supabase.co/realtime/v1/websocket?apikey=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhmbHpzb3J1dm1vZHFqc2Z2cndyIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjM0MzAwMDIsImV4cCI6MjA3OTAwNjAwMn0.CY5Za3yO0QH1x4ChjwvMVn1O9WmZIWF3QkfWoHF7WvU&vsn=1.0.0';
+    
+    const ws = new WebSocket(wsUrl);
+    
+    ws.onopen = () => {
+      console.log('SW: Realtime подключен');
+      
+      // Подписываемся на изменения в таблице orders
+      const joinMessage = {
+        topic: 'realtime:public:orders',
+        event: 'phx_join',
+        payload: {},
+        ref: '1'
+      };
+      
+      ws.send(JSON.stringify(joinMessage));
+    };
+    
+    ws.onmessage = (event) => {
+      try {
+        const data = JSON.parse(event.data);
+        
+        // Обрабатываем новые заказы
+        if (data.event === 'INSERT' && data.payload && data.payload.record) {
+          const order = data.payload.record;
+          handleNewOrder(order);
+        }
+      } catch (error) {
+        console.error('SW: Ошибка обработки Realtime сообщения:', error);
+      }
+    };
+    
+    ws.onerror = (error) => {
+      console.error('SW: Ошибка Realtime соединения:', error);
+    };
+    
+    ws.onclose = () => {
+      console.log('SW: Realtime соединение закрыто');
+      // Переподключение через 5 секунд
+      setTimeout(initRealtimeConnection, 5000);
+    };
+    
+  } catch (error) {
+    console.error('SW: Ошибка инициализации Realtime:', error);
+  }
+}
+
+function handleNewOrder(order) {
+  const serviceIcon = order.service_type === 'water' ? '💧' : '🚝';
+  const serviceName = order.service_type === 'water' ? 'Доставка воды' : 'Откачка септика';
+  
+  self.registration.showNotification(`${serviceIcon} Новый заказ!`, {
+    body: `${serviceName} от ${order.user_name}`,
+    icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+    badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+    vibrate: [300, 100, 300, 100, 300],
+    silent: false,
+    requireInteraction: true,
+    tag: `realtime-order-${order.id}`,
+    data: { orderId: order.id, url: '/driver.html' }
+  });
+}
 
 async function checkForNewOrders() {
   try {
