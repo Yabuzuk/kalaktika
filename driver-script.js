@@ -7,33 +7,47 @@ let notificationInterval = null;
 
 // Инициализация при загрузке страницы
 document.addEventListener('DOMContentLoaded', async function() {
-    await initializeDriver();
-    setupEventListeners();
-    loadOrders();
+    console.log('DOM загружен, начинаем инициализацию...');
     
-    // Запрашиваем разрешение на уведомления
-    requestNotificationPermission();
-    
-    // PWA установка для водителей
-    setupDriverPWA();
-    
-    // Подписка на изменения заказов
-    subscribeToDriverOrderUpdates();
-    
-    // Проверка напоминаний каждую минуту
-    notificationInterval = setInterval(checkReminders, 60000);
-    
-    // Инициализация календаря
-    initCalendar();
-    
-    // Проверяем доступность Яндекс.Карт
-    setTimeout(() => {
-        if (typeof ymaps === 'undefined') {
-            console.warn('Яндекс.Карты API не загрузился');
-        } else {
-            console.log('Яндекс.Карты API успешно загружен');
+    // Проверяем наличие ключевых элементов
+    const requiredElements = ['ordersList', 'driverName', 'newOrdersCount'];
+    for (const elementId of requiredElements) {
+        const element = document.getElementById(elementId);
+        if (!element) {
+            console.error(`Элемент ${elementId} не найден`);
+            alert(`Ошибка загрузки страницы: элемент ${elementId} не найден`);
+            return;
         }
-    }, 2000);
+    }
+    
+    try {
+        await initializeDriver();
+        setupEventListeners();
+        
+        // Даем время на инициализацию
+        setTimeout(() => {
+            loadOrders();
+        }, 1000);
+        
+        // Запрашиваем разрешение на уведомления
+        requestNotificationPermission();
+        
+        // PWA установка для водителей
+        setupDriverPWA();
+        
+        // Подписка на изменения заказов
+        subscribeToDriverOrderUpdates();
+        
+        // Проверка напоминаний каждую минуту
+        notificationInterval = setInterval(checkReminders, 60000);
+        
+        // Инициализация календаря
+        initCalendar();
+        
+    } catch (error) {
+        console.error('Ошибка инициализации:', error);
+        alert('Ошибка загрузки CRM. Перезагрузите страницу.');
+    }
 });
 
 function subscribeToDriverOrderUpdates() {
@@ -122,12 +136,19 @@ function showDriverNotification(message, type = 'info') {
 }
 
 async function initializeDriver() {
+    console.log('Инициализация водителя...');
+    
     // Проверяем авторизацию водителя
     driverId = localStorage.getItem('driverId');
     const driverName = localStorage.getItem('driverName') || 'Водитель';
     
+    console.log('Driver ID:', driverId);
+    console.log('Driver Name:', driverName);
+    
     if (!driverId) {
-        window.location.href = 'driver-login.html';
+        console.log('Нет ID водителя, перенаправляем на вход');
+        alert('Необходимо войти в систему');
+        window.location.href = 'index.html';
         return;
     }
     
@@ -207,8 +228,25 @@ function setupEventListeners() {
 }
 
 async function loadOrders() {
+    console.log('Загрузка заказов...');
+    
     try {
         const currentDriverId = localStorage.getItem('driverId');
+        console.log('Текущий ID водителя:', currentDriverId);
+        
+        if (!currentDriverId) {
+            console.error('Нет ID водителя');
+            return;
+        }
+        
+        // Проверяем подключение к Supabase
+        if (!supabaseClient) {
+            console.error('Supabase клиент не инициализирован');
+            alert('Ошибка подключения к базе данных');
+            return;
+        }
+        
+        console.log('Запрос к базе данных...');
         
         // Загружаем только заказы текущего водителя или новые заказы
         const { data, error } = await supabaseClient
@@ -217,25 +255,42 @@ async function loadOrders() {
             .or(`driver_id.eq.${currentDriverId},driver_id.is.null`)
             .order('created_at', { ascending: false });
 
-        if (error) throw error;
+        console.log('Ответ от базы:', { data, error });
+
+        if (error) {
+            console.error('Ошибка запроса:', error);
+            throw error;
+        }
         
         orders = data || [];
+        console.log('Загружено заказов:', orders.length);
+        
         renderOrders();
         updateStats();
         renderCalendar();
         
     } catch (error) {
         console.error('Ошибка загрузки заказов:', error);
+        alert('Ошибка загрузки данных. Проверьте интернет-соединение.');
     }
 }
 
 function renderOrders() {
+    console.log('Отображение заказов...');
+    
     const ordersList = document.getElementById('ordersList');
+    if (!ordersList) {
+        console.error('Элемент ordersList не найден');
+        return;
+    }
+    
     let filteredOrders = orders;
     
     if (currentFilter !== 'all') {
         filteredOrders = orders.filter(order => order.status === currentFilter);
     }
+    
+    console.log('Отфильтровано заказов:', filteredOrders.length);
     
     if (filteredOrders.length === 0) {
         ordersList.innerHTML = '<div style="text-align: center; padding: 40px; color: #666;">Заказов не найдено</div>';
