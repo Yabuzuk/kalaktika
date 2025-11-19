@@ -248,12 +248,35 @@ async function loadOrders() {
         
         console.log('Запрос к базе данных...');
         
-        // Загружаем только заказы текущего водителя или новые заказы
-        const { data, error } = await supabaseClient
+        // Получаем тип услуг водителя
+        const { data: driverData, error: driverError } = await supabaseClient
+            .from('drivers')
+            .select('service_type')
+            .eq('id', currentDriverId)
+            .single();
+            
+        if (driverError) {
+            console.error('Ошибка получения данных водителя:', driverError);
+            return;
+        }
+        
+        const driverServiceType = driverData.service_type;
+        console.log('Тип услуг водителя:', driverServiceType);
+        
+        // Загружаем заказы с учетом типа услуг водителя
+        let query = supabaseClient
             .from('orders')
-            .select('*')
-            .or(`driver_id.eq.${currentDriverId},driver_id.is.null`)
-            .order('created_at', { ascending: false });
+            .select('*');
+            
+        if (driverServiceType === 'both') {
+            // Водитель работает с обеими услугами
+            query = query.or(`driver_id.eq.${currentDriverId},driver_id.is.null`);
+        } else {
+            // Водитель работает только с определенным типом услуг
+            query = query.or(`driver_id.eq.${currentDriverId},and(driver_id.is.null,service_type.eq.${driverServiceType})`);
+        }
+        
+        const { data, error } = await query.order('created_at', { ascending: false });
 
         console.log('Ответ от базы:', { data, error });
 
