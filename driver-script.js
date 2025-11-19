@@ -762,6 +762,22 @@ function playNotificationSound() {
 function showBrowserNotification(title, body) {
     console.log('Попытка показать уведомление:', title, body);
     
+    // Push уведомление через Service Worker
+    if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+        navigator.serviceWorker.ready.then(registration => {
+            registration.showNotification(title, {
+                body: body,
+                icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+                badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+                vibrate: [300, 100, 300, 100, 300],
+                silent: false,
+                requireInteraction: true,
+                tag: 'driver-notification'
+            });
+        });
+    }
+    
+    // Дублируем обычным уведомлением
     if (!('Notification' in window)) {
         console.log('Браузер не поддерживает уведомления');
         return;
@@ -771,7 +787,7 @@ function showBrowserNotification(title, body) {
         try {
             const notification = new Notification(title, {
                 body: body,
-                icon: '🚛',
+                icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
                 requireInteraction: true
             });
             
