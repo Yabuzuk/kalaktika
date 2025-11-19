@@ -297,21 +297,29 @@ function renderOrders() {
         return;
     }
     
-    ordersList.innerHTML = filteredOrders.map(order => createOrderCard(order)).join('');
-    
-    // Добавляем обработчики событий
-    document.querySelectorAll('.order-card').forEach(card => {
-        card.addEventListener('click', function(e) {
-            // Проверяем, не кликнули ли по кнопке
-            if (e.target.classList.contains('btn')) {
-                e.stopPropagation();
-                return;
-            }
-            
-            const orderId = this.dataset.orderId;
-            showOrderDetails(orderId);
+    try {
+        const ordersHtml = filteredOrders.map(order => createOrderCard(order)).join('');
+        ordersList.innerHTML = ordersHtml;
+        console.log('Лента заказов отображена');
+        
+        // Добавляем обработчики событий
+        document.querySelectorAll('.order-card').forEach(card => {
+            card.addEventListener('click', function(e) {
+                // Проверяем, не кликнули ли по кнопке
+                if (e.target.classList.contains('btn')) {
+                    e.stopPropagation();
+                    return;
+                }
+                
+                const orderId = this.dataset.orderId;
+                showOrderDetails(orderId);
+            });
         });
-    });
+        
+    } catch (error) {
+        console.error('Ошибка отображения ленты:', error);
+        ordersList.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Ошибка отображения заказов</div>';
+    }
     
     // Обработчики для кнопок принятия/отклонения
     document.querySelectorAll('.btn-accept, .btn-cancel').forEach(btn => {
@@ -664,62 +672,83 @@ function initCalendar() {
 }
 
 function renderCalendar() {
-    const monthNames = [
-        'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
-    ];
+    console.log('Отображение календаря...');
     
-    const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
-    
-    document.getElementById('currentMonth').textContent = 
-        `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
-    
-    const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
-    const startDate = new Date(firstDay);
-    startDate.setDate(startDate.getDate() - (firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1));
-    
-    let calendarHtml = '<div class="calendar-grid">';
-    
-    // Заголовки дней недели
-    dayNames.forEach(day => {
-        calendarHtml += `<div class="calendar-header">${day}</div>`;
-    });
-    
-    // Дни месяца
-    const today = new Date();
-    for (let i = 0; i < 42; i++) {
-        const date = new Date(startDate);
-        date.setDate(startDate.getDate() + i);
-        
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        const dateStr = `${year}-${month}-${day}`;
-        
-        const isCurrentMonth = date.getMonth() === currentDate.getMonth();
-        const isToday = date.toDateString() === today.toDateString();
-        const dayOrders = getOrdersForDate(date);
-        
-        let dayClass = 'calendar-day';
-        if (!isCurrentMonth) dayClass += ' other-month';
-        if (isToday) dayClass += ' today';
-        
-        calendarHtml += `
-            <div class="${dayClass}" data-date="${dateStr}" onclick="showDayOrders('${dateStr}')">
-                <div class="day-number">${date.getDate()}</div>
-                <div class="day-orders">
-                    ${dayOrders.map(order => 
-                        `<div class="order-dot ${order.service_type}" title="${order.service_type === 'water' ? 'Вода' : 'Септик'} ${order.delivery_time}">
-                            ${order.delivery_time.slice(0, 5)}
-                        </div>`
-                    ).join('')}
-                </div>
-            </div>
-        `;
+    const calendarElement = document.getElementById('calendar');
+    if (!calendarElement) {
+        console.error('Элемент calendar не найден');
+        return;
     }
     
-    calendarHtml += '</div>';
-    document.getElementById('calendar').innerHTML = calendarHtml;
+    const currentMonthElement = document.getElementById('currentMonth');
+    if (!currentMonthElement) {
+        console.error('Элемент currentMonth не найден');
+        return;
+    }
+    
+    try {
+        const monthNames = [
+            'Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+            'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'
+        ];
+        
+        const dayNames = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
+        
+        currentMonthElement.textContent = 
+            `${monthNames[currentDate.getMonth()]} ${currentDate.getFullYear()}`;
+        
+        const firstDay = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1);
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - (firstDay.getDay() === 0 ? 6 : firstDay.getDay() - 1));
+        
+        let calendarHtml = '<div class="calendar-grid">';
+        
+        // Заголовки дней недели
+        dayNames.forEach(day => {
+            calendarHtml += `<div class="calendar-header">${day}</div>`;
+        });
+        
+        // Дни месяца
+        const today = new Date();
+        for (let i = 0; i < 42; i++) {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + i);
+            
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const dateStr = `${year}-${month}-${day}`;
+            
+            const isCurrentMonth = date.getMonth() === currentDate.getMonth();
+            const isToday = date.toDateString() === today.toDateString();
+            const dayOrders = getOrdersForDate(date);
+            
+            let dayClass = 'calendar-day';
+            if (!isCurrentMonth) dayClass += ' other-month';
+            if (isToday) dayClass += ' today';
+            
+            calendarHtml += `
+                <div class="${dayClass}" data-date="${dateStr}" onclick="showDayOrders('${dateStr}')">
+                    <div class="day-number">${date.getDate()}</div>
+                    <div class="day-orders">
+                        ${dayOrders.map(order => 
+                            `<div class="order-dot ${order.service_type}" title="${order.service_type === 'water' ? 'Вода' : 'Септик'} ${order.delivery_time}">
+                                ${order.delivery_time.slice(0, 5)}
+                            </div>`
+                        ).join('')}
+                    </div>
+                </div>
+            `;
+        }
+        
+        calendarHtml += '</div>';
+        calendarElement.innerHTML = calendarHtml;
+        console.log('Календарь отображен');
+        
+    } catch (error) {
+        console.error('Ошибка отображения календаря:', error);
+        calendarElement.innerHTML = '<div style="padding: 20px; text-align: center; color: #666;">Ошибка загрузки календаря</div>';
+    }
 }
 
 function getOrdersForDate(date) {
