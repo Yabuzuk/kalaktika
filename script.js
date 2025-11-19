@@ -129,7 +129,8 @@ function showOrderUpdateNotification(order) {
     showPushNotification('🚛 Обновление заказа', {
         body: message,
         tag: `order-${order.id}`,
-        requireInteraction: true
+        requireInteraction: true,
+        silent: false
     });
     
     // Создаем уведомление
@@ -1229,7 +1230,10 @@ function showPushNotification(title, options = {}) {
             registration.showNotification(title, {
                 icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
                 badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
-                vibrate: [200, 100, 200],
+                vibrate: [300, 100, 300, 100, 300],
+                silent: false,
+                sound: 'default',
+                requireInteraction: true,
                 ...options
             });
         });

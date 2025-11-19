@@ -80,6 +80,38 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   
   event.waitUntil(
-    clients.openWindow('/')
+    clients.matchAll({ type: 'window' }).then(clientList => {
+      // Если приложение уже открыто, фокусируемся на нём
+      for (let client of clientList) {
+        if (client.url === '/' && 'focus' in client) {
+          return client.focus();
+        }
+      }
+      // Иначе открываем новое окно
+      if (clients.openWindow) {
+        return clients.openWindow('/');
+      }
+    })
   );
+});
+
+// Обработка push сообщений
+self.addEventListener('push', event => {
+  if (event.data) {
+    const data = event.data.json();
+    
+    const options = {
+      body: data.body || 'Обновление заказа',
+      icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+      badge: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
+      vibrate: [300, 100, 300, 100, 300],
+      silent: false,
+      requireInteraction: true,
+      tag: data.tag || 'default'
+    };
+    
+    event.waitUntil(
+      self.registration.showNotification(data.title || '🚛 Водовозка', options)
+    );
+  }
 });
