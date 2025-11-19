@@ -943,41 +943,6 @@ function fallbackNotification(title, body) {
         console.error('Ошибка создания уведомления:', error);
     }
 }
-    
-    // Дублируем обычным уведомлением
-    if (!('Notification' in window)) {
-        console.log('Браузер не поддерживает уведомления');
-        return;
-    }
-    
-    if (Notification.permission === 'granted') {
-        try {
-            const notification = new Notification(title, {
-                body: body,
-                icon: 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"%3E%3Crect width="100" height="100" fill="%23667eea"/%3E%3Ctext x="50" y="60" font-size="40" text-anchor="middle" fill="white"%3E🚛%3C/text%3E%3C/svg%3E',
-                requireInteraction: true
-            });
-            
-            console.log('Уведомление создано');
-            
-            // Автозакрытие через 8 секунд
-            setTimeout(() => {
-                notification.close();
-            }, 8000);
-            
-            // Клик по уведомлению
-            notification.onclick = function() {
-                window.focus();
-                notification.close();
-            };
-            
-        } catch (error) {
-            console.error('Ошибка создания уведомления:', error);
-        }
-    } else {
-        console.log('Нет разрешения на уведомления. Текущий статус:', Notification.permission);
-    }
-}
 
 // Переменные для карты
 let orderMap = null;

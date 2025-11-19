@@ -337,7 +337,10 @@ function setupEventListeners() {
     // Скрываем подсказки при клике вне поля
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.address-input-container')) {
-            document.getElementById('addressSuggestions').style.display = 'none';
+            const suggestions = document.getElementById('addressSuggestions');
+            if (suggestions) {
+                suggestions.style.display = 'none';
+            }
         }
     });
 }
