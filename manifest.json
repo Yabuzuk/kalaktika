@@ -2,26 +2,13 @@
   "name": "Водовозка и Септик",
   "short_name": "Водовозка",
   "description": "Сервис заказа доставки воды и откачки септика в Мирном",
-  "start_url": "/",
+  "start_url": "./",
   "display": "standalone",
   "background_color": "#667eea",
   "theme_color": "#667eea",
   "orientation": "portrait",
-  "scope": "/",
-  "icons": [
-    {
-      "src": "icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any maskable"
-    },
-    {
-      "src": "icon-512.png", 
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any maskable"
-    }
-  ],
+  "scope": "./",
+  "icons": [],
   "categories": ["business", "utilities"],
   "lang": "ru"
 }

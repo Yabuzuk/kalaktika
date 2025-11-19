@@ -1,17 +1,17 @@
 const CACHE_NAME = 'kalaktika-v1';
 const urlsToCache = [
-  '/',
-  '/index.html',
-  '/login.html',
-  '/styles.css',
-  '/script.js',
-  '/config.js',
-  '/admin.html',
-  '/admin-styles.css',
-  '/admin-script.js',
-  '/driver.html',
-  '/driver-styles.css',
-  '/driver-script.js'
+  './',
+  './index.html',
+  './login.html',
+  './styles.css',
+  './script.js',
+  './config.js',
+  './admin.html',
+  './admin-styles.css',
+  './admin-script.js',
+  './driver.html',
+  './driver-styles.css',
+  './driver-script.js'
 ];
 
 // Установка Service Worker
