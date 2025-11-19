@@ -283,6 +283,9 @@ function setupEventListeners() {
             switchDriverTab(tabName);
         });
     });
+    
+    // PWA установка
+    setupPWAInstall();
 
 
     
@@ -969,6 +972,41 @@ function logout() {
     currentUser = null;
     localStorage.clear();
     window.location.href = 'login.html';
+}
+
+// PWA функциональность
+let deferredPrompt;
+
+function setupPWAInstall() {
+    const installBtn = document.getElementById('installBtn');
+    
+    // Слушаем событие beforeinstallprompt
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredPrompt = e;
+        installBtn.style.display = 'block';
+    });
+    
+    // Обработчик кнопки установки
+    installBtn.addEventListener('click', async () => {
+        if (!deferredPrompt) return;
+        
+        deferredPrompt.prompt();
+        const { outcome } = await deferredPrompt.userChoice;
+        
+        if (outcome === 'accepted') {
+            console.log('PWA установлено');
+        }
+        
+        deferredPrompt = null;
+        installBtn.style.display = 'none';
+    });
+    
+    // Скрываем кнопку если уже установлено
+    window.addEventListener('appinstalled', () => {
+        installBtn.style.display = 'none';
+        console.log('PWA установлено успешно');
+    });
 }
 
 // Утилита для debounce
