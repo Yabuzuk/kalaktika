@@ -1215,6 +1215,13 @@ function showOfflineMessage() {
 // Push уведомления
 async function requestNotificationPermission() {
     if ('Notification' in window && 'serviceWorker' in navigator) {
+        // На мобильных требуется пользовательское взаимодействие
+        if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            // Показываем кнопку для включения уведомлений
+            showNotificationButton();
+            return false;
+        }
+        
         const permission = await Notification.requestPermission();
         if (permission === 'granted') {
             console.log('Разрешение на уведомления получено');
@@ -1222,6 +1229,42 @@ async function requestNotificationPermission() {
         }
     }
     return false;
+}
+
+function showNotificationButton() {
+    if (Notification.permission === 'granted') return;
+    
+    const notifBtn = document.createElement('button');
+    notifBtn.textContent = '🔔 Включить уведомления';
+    notifBtn.style.cssText = `
+        position: fixed;
+        top: 70px;
+        left: 20px;
+        right: 20px;
+        background: #ff6b35;
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        z-index: 10000;
+        animation: pulse 2s infinite;
+    `;
+    
+    notifBtn.addEventListener('click', async () => {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            notifBtn.remove();
+            // Тестовое уведомление
+            showPushNotification('✅ Уведомления включены!', {
+                body: 'Теперь вы будете получать уведомления о заказах',
+                tag: 'notification-enabled'
+            });
+        }
+    });
+    
+    document.body.appendChild(notifBtn);
 }
 
 function showPushNotification(title, options = {}) {

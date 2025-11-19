@@ -727,6 +727,12 @@ function showReminder(message, type = 'info') {
 // Функции для уведомлений
 async function requestNotificationPermission() {
     if ('Notification' in window) {
+        // На мобильных требуется пользовательское взаимодействие
+        if (/Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)) {
+            showDriverNotificationButton();
+            return;
+        }
+        
         if (Notification.permission === 'default') {
             const permission = await Notification.requestPermission();
             console.log('Разрешение на уведомления:', permission);
@@ -735,6 +741,38 @@ async function requestNotificationPermission() {
     } else {
         console.log('Браузер не поддерживает уведомления');
     }
+}
+
+function showDriverNotificationButton() {
+    if (Notification.permission === 'granted') return;
+    
+    const notifBtn = document.createElement('button');
+    notifBtn.textContent = '🔔 Включить уведомления';
+    notifBtn.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 20px;
+        right: 20px;
+        background: #ff6b35;
+        color: white;
+        border: none;
+        padding: 15px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+        z-index: 10000;
+        animation: pulse 2s infinite;
+    `;
+    
+    notifBtn.addEventListener('click', async () => {
+        const permission = await Notification.requestPermission();
+        if (permission === 'granted') {
+            notifBtn.remove();
+            showBrowserNotification('✅ Уведомления включены!', 'Теперь вы будете получать уведомления о новых заказах');
+        }
+    });
+    
+    document.body.appendChild(notifBtn);
 }
 
 function playNotificationSound() {
