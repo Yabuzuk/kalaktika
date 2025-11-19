@@ -984,28 +984,18 @@ function setupPWAInstall() {
     window.addEventListener('beforeinstallprompt', (e) => {
         e.preventDefault();
         deferredPrompt = e;
-        installBtn.style.display = 'block';
     });
     
     // Обработчик кнопки установки
     installBtn.addEventListener('click', async () => {
-        if (!deferredPrompt) return;
-        
-        deferredPrompt.prompt();
-        const { outcome } = await deferredPrompt.userChoice;
-        
-        if (outcome === 'accepted') {
-            console.log('PWA установлено');
+        if (deferredPrompt) {
+            deferredPrompt.prompt();
+            const { outcome } = await deferredPrompt.userChoice;
+            console.log('PWA установка:', outcome);
+            deferredPrompt = null;
+        } else {
+            alert('Для установки:\n\n1. Откройте меню браузера (…)\n2. Найдите "Установить приложение"\n3. Или "На главный экран"');
         }
-        
-        deferredPrompt = null;
-        installBtn.style.display = 'none';
-    });
-    
-    // Скрываем кнопку если уже установлено
-    window.addEventListener('appinstalled', () => {
-        installBtn.style.display = 'none';
-        console.log('PWA установлено успешно');
     });
 }
 
