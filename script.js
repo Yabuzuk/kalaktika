@@ -67,7 +67,10 @@ function initializeApp() {
     
     // Инициализируем Яндекс карты
     if (typeof ymaps !== 'undefined') {
-        ymaps.ready(initMaps);
+        ymaps.ready(() => {
+            initMaps();
+            console.log('Автодополнение адресов активировано');
+        });
     } else {
         console.log('Яндекс.Карты API не загружен, работаем без карт');
         hideMapFeatures();
@@ -286,6 +289,9 @@ function setupEventListeners() {
     // Обновление временных слотов при смене даты
     document.getElementById('date').addEventListener('change', generateTimeSlots);
     
+    // Подсказки адресов
+    document.getElementById('address').addEventListener('input', debounce(showAddressSuggestions, 300));
+    
     // Скрываем подсказки при клике вне поля
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.address-input-container')) {
@@ -447,15 +453,83 @@ function confirmAddress() {
     closeMapModal();
 }
 
-function showAddressSuggestions(query) {
-    // Отключаем автодополнение - используем только карту
+async function showAddressSuggestions() {
+    const query = document.getElementById('address').value.trim();
     const suggestionsContainer = document.getElementById('addressSuggestions');
-    suggestionsContainer.style.display = 'none';
+    
+    if (query.length < 3) {
+        suggestionsContainer.style.display = 'none';
+        return;
+    }
+    
+    try {
+        // Используем Яндекс.Геосаджест API
+        const response = await fetch(`https://suggest-maps.yandex.ru/v1/suggest?apikey=41a4deeb-0548-4d8e-b897-3c4a6bc08032&text=Мирный ${encodeURIComponent(query)}&results=5&lang=ru_RU`);
+        
+        if (!response.ok) {
+            console.log(`Яндекс API ошибка: ${response.status}, используем локальные подсказки`);
+            showLocalSuggestions(query, suggestionsContainer);
+            return;
+        }
+        
+        const data = await response.json();
+        
+        if (data.results && data.results.length > 0) {
+            let html = '';
+            data.results.forEach(result => {
+                // Очищаем адрес от лишних частей
+                let cleanAddress = result.title.text
+                    .replace('Россия, ', '')
+                    .replace('Республика Саха (Якутия), ', '')
+                    .replace('Мирный, ', '')
+                    .replace('город Мирный, ', '');
+                    
+                html += `<div class="suggestion-item" onclick="selectSuggestion('${cleanAddress}')">${cleanAddress}</div>`;
+            });
+            suggestionsContainer.innerHTML = html;
+            suggestionsContainer.style.display = 'block';
+        } else {
+            showLocalSuggestions(query, suggestionsContainer);
+        }
+        
+    } catch (error) {
+        console.log('Ошибка Яндекс API, используем локальные подсказки');
+        showLocalSuggestions(query, suggestionsContainer);
+    }
+}
+
+function showLocalSuggestions(query, container) {
+    const commonAddresses = [
+        'ул. Ленина', 'ул. Мира', 'ул. Полярная', 'ул. Комсомольская',
+        'ул. Пионерская', 'ул. Молодежная', 'ул. Трудовая', 'ул. Новая',
+        'ул. Центральная', 'ул. Парковая', 'ул. Лесная', 'ул. Советская',
+        'ул. Маяковского', 'ул. Пушкина', 'ул. Горького', 'ул. Октябрьская',
+        'ул. Мирная', 'ул. Строителей', 'ул. Мирнинская', 'ул. Кирова',
+        'пр. Ленина', 'пр. Мира', 'пер. Ленина', 'пер. Мира'
+    ];
+    
+    const filtered = commonAddresses.filter(addr => 
+        addr.toLowerCase().includes(query.toLowerCase())
+    );
+    
+    if (filtered.length > 0) {
+        let html = '';
+        filtered.slice(0, 5).forEach(address => {
+            html += `<div class="suggestion-item" onclick="selectSuggestion('${address}')">${address}</div>`;
+        });
+        container.innerHTML = html;
+        container.style.display = 'block';
+    } else {
+        container.style.display = 'none';
+    }
 }
 
 function selectSuggestion(address) {
     document.getElementById('address').value = address;
     document.getElementById('addressSuggestions').style.display = 'none';
+    
+    // Очищаем координаты при выборе адреса из подсказок
+    selectedCoords = null;
 }
 
 

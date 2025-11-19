@@ -508,18 +508,28 @@ body {
 }
 
 .suggestion-item {
-    padding: 12px;
+    padding: 10px 12px;
     cursor: pointer;
     border-bottom: 1px solid #f0f0f0;
     transition: background 0.2s;
+    font-size: 14px;
+    color: #333;
 }
 
 .suggestion-item:hover {
     background: #f8f9ff;
+    color: #667eea;
 }
 
 .suggestion-item:last-child {
     border-bottom: none;
+}
+
+.suggestions {
+    max-height: 200px;
+    overflow-y: auto;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    border-radius: 0 0 8px 8px;
 }
 
 #selectOnMap {
