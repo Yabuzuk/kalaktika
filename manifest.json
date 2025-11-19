@@ -3,7 +3,7 @@
   "short_name": "Водовозка",
   "description": "Сервис заказа доставки воды и откачки септика в Мирном",
   "start_url": "./",
-  "display": "fullscreen",
+  "display": "standalone",
   "background_color": "#667eea",
   "theme_color": "#667eea",
   "orientation": "portrait",
