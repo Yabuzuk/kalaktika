@@ -14,13 +14,21 @@
     <meta name="apple-mobile-web-app-title" content="Водовозка">
     <meta name="format-detection" content="telephone=no">
     
+    <!-- Resource hints для оптимизации -->
+    <link rel="dns-prefetch" href="//xflzsoruvmodqjsfvrwr.supabase.co">
+    <link rel="dns-prefetch" href="//api-maps.yandex.ru">
+    <link rel="dns-prefetch" href="//unpkg.com">
+    <link rel="preconnect" href="https://xflzsoruvmodqjsfvrwr.supabase.co">
+    <link rel="preconnect" href="https://unpkg.com">
+    
     <link rel="stylesheet" href="styles.css">
-    <script src="https://api-maps.yandex.ru/2.1/?apikey=63c21778-deb0-4a95-bc2a-fb4d2dd46449&lang=ru_RU" type="text/javascript"></script>
+    <!-- Яндекс карты загружаются лениво через lazy-maps.js -->
     <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
     <script src="config.js"></script>
     <script src="cache-manager.js"></script>
     <script src="ui-loader.js"></script>
     <script src="lazy-maps.js"></script>
+    <script src="mobile-optimizer.js"></script>
 </head>
 <body>
     <div class="top-bar">

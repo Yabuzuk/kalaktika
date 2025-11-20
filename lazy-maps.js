@@ -67,10 +67,27 @@ class LazyMaps {
 
     loadScript() {
         return new Promise((resolve, reject) => {
+            // Проверяем скорость соединения
+            if (navigator.connection && navigator.connection.effectiveType === 'slow-2g') {
+                reject(new Error('Очень медленное соединение'));
+                return;
+            }
+            
             const script = document.createElement('script');
             script.src = 'https://api-maps.yandex.ru/2.1/?apikey=63c21778-deb0-4a95-bc2a-fb4d2dd46449&lang=ru_RU';
             script.onload = resolve;
             script.onerror = reject;
+            
+            // Таймаут для медленных соединений
+            const timeout = setTimeout(() => {
+                reject(new Error('Таймаут загрузки карт'));
+            }, 15000);
+            
+            script.onload = () => {
+                clearTimeout(timeout);
+                resolve();
+            };
+            
             document.head.appendChild(script);
         });
     }

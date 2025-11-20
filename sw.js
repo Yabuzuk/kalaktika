@@ -1,4 +1,5 @@
-const CACHE_NAME = 'kalaktika-v4';
+const CACHE_NAME = 'kalaktika-v5';
+const MOBILE_CACHE_NAME = 'kalaktika-mobile-v1';
 const urlsToCache = [
   './',
   './index.html',
@@ -31,7 +32,7 @@ self.addEventListener('install', event => {
   );
 });
 
-// Обработка запросов
+// Обработка запросов с оптимизацией для мобильного интернета
 self.addEventListener('fetch', event => {
   // Пропускаем запросы к внешним API
   if (event.request.url.includes('supabase.co') || 
@@ -43,12 +44,22 @@ self.addEventListener('fetch', event => {
   event.respondWith(
     caches.match(event.request)
       .then(response => {
-        // Возвращаем кэшированную версию или загружаем из сети
+        // Возвращаем кэшированную версию немедленно
         if (response) {
           return response;
         }
         
+        // Для мобильных - агрессивное кэширование
         return fetch(event.request)
+          .then(fetchResponse => {
+            if (fetchResponse.status === 200 && event.request.method === 'GET') {
+              const responseClone = fetchResponse.clone();
+              caches.open(MOBILE_CACHE_NAME).then(cache => {
+                cache.put(event.request, responseClone);
+              });
+            }
+            return fetchResponse;
+          })
           .catch(() => {
             // Если сеть недоступна, возвращаем главную страницу для SPA
             if (event.request.destination === 'document') {
