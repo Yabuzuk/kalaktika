@@ -83,6 +83,13 @@ function initializeApp() {
     if (!lazyMaps.isMobileOptimal()) {
         hideMapFeatures();
         console.log('Карты отключены для медленного соединения');
+    } else {
+        // Запускаем фоновую загрузку карт через 3 секунды
+        if (lazyMaps.canPreload()) {
+            setTimeout(() => {
+                preloadMapsInBackground();
+            }, 3000);
+        }
     }
 }
 
@@ -506,7 +513,7 @@ async function openMapModal() {
     document.getElementById('mapModal').style.display = 'block';
     document.body.style.overflow = 'hidden';
     
-    // Ленивая загрузка карт
+    // Проверяем, загружены ли карты
     if (!lazyMaps.loaded) {
         UILoader.showSpinner('Загрузка карт...');
         
@@ -518,8 +525,10 @@ async function openMapModal() {
             closeMapModal();
             return;
         }
-        
-        // Инициализируем карту после загрузки
+    }
+    
+    // Инициализируем карту если нужно
+    if (!modalMap) {
         initMaps();
     }
     
@@ -532,6 +541,55 @@ async function openMapModal() {
             }
         }
     }, 300);
+}
+
+// Фоновая загрузка карт
+async function preloadMapsInBackground() {
+    if (lazyMaps.loaded || lazyMaps.loading) return;
+    
+    console.log('Запуск фоновой загрузки карт...');
+    
+    try {
+        const loaded = await lazyMaps.load();
+        if (loaded) {
+            console.log('Карты загружены в фоне');
+            // Предварительно инициализируем карту (без отображения)
+            preInitializeMap();
+        }
+    } catch (error) {
+        console.log('Ошибка фоновой загрузки карт:', error);
+    }
+}
+
+// Предварительная инициализация карты
+function preInitializeMap() {
+    if (modalMap || typeof ymaps === 'undefined') return;
+    
+    try {
+        // Создаем скрытый контейнер для предзагрузки
+        const preloadContainer = document.createElement('div');
+        preloadContainer.id = 'preloadMap';
+        preloadContainer.style.cssText = 'position: absolute; top: -1000px; width: 300px; height: 200px;';
+        document.body.appendChild(preloadContainer);
+        
+        ymaps.ready(() => {
+            const preloadMap = new ymaps.Map('preloadMap', {
+                center: [62.5354, 113.9607],
+                zoom: 13,
+                controls: []
+            });
+            
+            // Удаляем предзагрузочную карту через 2 секунды
+            setTimeout(() => {
+                preloadMap.destroy();
+                preloadContainer.remove();
+                console.log('Предзагрузка карты завершена');
+            }, 2000);
+        });
+        
+    } catch (error) {
+        console.log('Ошибка предзагрузки карты:', error);
+    }
 }
 
 function closeMapModal() {

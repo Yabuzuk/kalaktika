@@ -95,9 +95,19 @@ class LazyMaps {
     // Проверка поддержки на мобильных
     isMobileOptimal() {
         const isMobile = /Android|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
-        const isSlowConnection = navigator.connection && navigator.connection.effectiveType === 'slow-2g';
+        const isSlowConnection = navigator.connection && (navigator.connection.effectiveType === 'slow-2g' || navigator.connection.effectiveType === '2g');
         
         return !isMobile || !isSlowConnection;
+    }
+    
+    // Проверка возможности фоновой загрузки
+    canPreload() {
+        // Фоновая загрузка только на быстрых соединениях
+        if (navigator.connection) {
+            const fastTypes = ['4g', '3g'];
+            return fastTypes.includes(navigator.connection.effectiveType);
+        }
+        return true; // По умолчанию разрешаем
     }
 }
 
