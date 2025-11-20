@@ -17,8 +17,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 async function checkAuthentication() {
     const userPhone = localStorage.getItem('userPhone');
+    const userId = localStorage.getItem('userId');
     
-    if (!userPhone) {
+    if (!userPhone || !userId) {
         window.location.href = 'role-select.html';
         return;
     }
@@ -31,7 +32,7 @@ async function checkAuthentication() {
         const { data: user, error } = await supabaseClient
             .from('users')
             .select('*')
-            .eq('phone', userPhone)
+            .eq('id', userId)
             .single();
             
         if (error || !user) {

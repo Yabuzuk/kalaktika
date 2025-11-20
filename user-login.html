@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Вход пользователя - Водовозка</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            padding: 40px 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            text-align: center;
+            max-width: 400px;
+            width: 100%;
+        }
+        
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(255,255,255,0.2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .logo {
+            font-size: 60px;
+            margin-bottom: 20px;
+        }
+        
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #333;
+        }
+        
+        .form-group input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .login-btn {
+            width: 100%;
+            padding: 15px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        
+        .login-btn:hover {
+            background: #5a6fd8;
+        }
+        
+        .login-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+    <button class="back-btn" onclick="window.location.href='role-select.html'">← Назад</button>
+    
+    <div class="container">
+        <div class="logo">👤</div>
+        <h1 class="title">Вход пользователя</h1>
+        <p class="subtitle">Введите номер телефона для входа</p>
+        
+        <form id="userLoginForm">
+            <div class="form-group">
+                <label for="userPhone">Номер телефона:</label>
+                <input type="tel" id="userPhone" placeholder="+7 (999) 123-45-67" required>
+            </div>
+            
+            <button type="submit" class="login-btn" id="loginBtn">Войти</button>
+        </form>
+    </div>
+
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    <script src="config.js"></script>
+    <script>
+        document.getElementById('userLoginForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            const phone = document.getElementById('userPhone').value;
+            const loginBtn = document.getElementById('loginBtn');
+            
+            if (!phone) {
+                alert('Введите номер телефона');
+                return;
+            }
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = 'Вход...';
+            
+            try {
+                // Проверяем или создаем пользователя
+                let { data: user, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('phone', phone)
+                    .single();
+                
+                if (error && error.code === 'PGRST116') {
+                    // Пользователь не найден, создаем нового
+                    const { data: newUser, error: createError } = await supabaseClient
+                        .from('users')
+                        .insert([{
+                            name: 'Пользователь',
+                            phone: phone
+                        }])
+                        .select()
+                        .single();
+                    
+                    if (createError) throw createError;
+                    user = newUser;
+                } else if (error) {
+                    throw error;
+                }
+                
+                // Сохраняем данные пользователя
+                localStorage.setItem('userPhone', phone);
+                localStorage.setItem('userId', user.id);
+                
+                // Переходим в приложение
+                window.location.href = 'index.html';
+                
+            } catch (error) {
+                console.error('Ошибка входа:', error);
+                alert('Ошибка при входе. Попробуйте еще раз.');
+            } finally {
+                loginBtn.disabled = false;
+                loginBtn.textContent = 'Войти';
+            }
+        });
+    </script>
+</body>
+</html>
