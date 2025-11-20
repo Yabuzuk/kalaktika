@@ -320,16 +320,6 @@ function setupEventListeners() {
     });
     
     document.getElementById('profileForm').addEventListener('submit', saveProfile);
-    document.getElementById('driverLoginForm').addEventListener('submit', loginDriver);
-    document.getElementById('driverRegisterForm').addEventListener('submit', registerDriver);
-    
-    // Табы водителя
-    document.querySelectorAll('.tab-btn').forEach(btn => {
-        btn.addEventListener('click', function() {
-            const tabName = this.dataset.tab;
-            switchDriverTab(tabName);
-        });
-    });
     
     // PWA установка
     setupPWAInstall();
@@ -877,25 +867,11 @@ function openHistoryModal() {
 
 function openDriverModal() {
     closeSideMenu();
-    // Предзаполняем телефон из профиля
-    const userPhone = localStorage.getItem('userPhone') || '';
-    document.getElementById('loginDriverPhone').value = userPhone;
-    document.getElementById('driverPhone').value = userPhone;
-    
-    // По умолчанию открываем вкладку входа
-    switchDriverTab('login');
-    document.getElementById('driverModal').style.display = 'block';
+    // Перенаправляем на страницу авторизации водителя
+    window.location.href = 'driver-auth.html';
 }
 
-function switchDriverTab(tabName) {
-    // Убираем активные классы
-    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
-    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-    
-    // Добавляем активные классы
-    document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
-    document.getElementById(`driver${tabName.charAt(0).toUpperCase() + tabName.slice(1)}Tab`).classList.add('active');
-}
+
 
 function closeModals() {
     document.querySelectorAll('.modal').forEach(modal => {
@@ -1056,110 +1032,9 @@ async function cancelOrderFromHistory(orderId) {
     loadOrderHistory();
 }
 
-async function loginDriver(e) {
-    e.preventDefault();
-    
-    const phone = document.getElementById('loginDriverPhone').value;
-    
-    try {
-        // Проверяем, есть ли такой водитель в Supabase
-        const { data, error } = await supabaseClient
-            .from('drivers')
-            .select('*')
-            .eq('phone', phone)
-            .single();
-        
-        if (error && error.code !== 'PGRST116') {
-            throw error;
-        }
-        
-        if (data) {
-            if (data.status === 'pending') {
-                alert('Ваш аккаунт ожидает активации администратором. Пожалуйста, подождите.');
-                return;
-            }
-            
-            if (data.status === 'blocked') {
-                alert('Ваш аккаунт заблокирован. Обратитесь к администратору.');
-                return;
-            }
-            
-            // Сохраняем данные водителя
-            localStorage.setItem('driverName', data.full_name);
-            localStorage.setItem('driverId', data.id);
-            localStorage.setItem('driverPhone', data.phone);
-            
-            closeModals();
-            
-            // Переходим в CRM водителя
-            window.open('driver.html', '_blank');
-        } else {
-            alert('Водитель с таким номером не найден. Пожалуйста, зарегистрируйтесь.');
-            switchDriverTab('register');
-        }
-    } catch (error) {
-        console.error('Ошибка входа водителя:', error);
-        alert('Ошибка при входе. Попробуйте еще раз.');
-    }
-}
 
-async function registerDriver(e) {
-    e.preventDefault();
-    
-    const fullName = document.getElementById('driverFullName').value;
-    const service = document.getElementById('driverService').value;
-    const phone = document.getElementById('driverPhone').value;
-    const carNumber = document.getElementById('driverCarNumber').value;
-    
-    try {
-        // Проверяем, нет ли уже такого водителя
-        const { data: existingDriver } = await supabaseClient
-            .from('drivers')
-            .select('id')
-            .eq('phone', phone)
-            .single();
-        
-        if (existingDriver) {
-            alert('Водитель с таким номером уже зарегистрирован. Используйте вкладку "Вход".');
-            return;
-        }
-        
-        // Регистрируем нового водителя
-        const { data: newDriver, error } = await supabaseClient
-            .from('drivers')
-            .insert([{
-                full_name: fullName,
-                phone: phone,
-                service_type: service,
-                car_number: carNumber
-            }])
-            .select()
-            .single();
-        
-        if (error) throw error;
-        
-        closeModals();
-        
-        alert(`Регистрация успешна!
 
-Спасибо за регистрацию, ${fullName}!
 
-Ваш аккаунт отправлен на модерацию.
-Мы свяжемся с вами после активации.`);
-        
-        // Очищаем форму
-        document.getElementById('driverRegisterForm').reset();
-        
-    } catch (error) {
-        console.error('Ошибка регистрации водителя:', error);
-        
-        if (error.code === '23505') { // Ошибка уникальности
-            alert('Водитель с таким номером уже существует.');
-        } else {
-            alert('Ошибка при регистрации. Попробуйте еще раз.');
-        }
-    }
-}
 
 function getServiceName(service) {
     const serviceNames = {

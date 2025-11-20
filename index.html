@@ -177,56 +177,7 @@
         </div>
     </div>
 
-    <div id="driverModal" class="modal">
-        <div class="modal-content">
-            <span class="close">&times;</span>
-            <h3 id="driverModalTitle">🚛 Водитель</h3>
-            
-            <div class="driver-tabs">
-                <button class="tab-btn active" data-tab="login">Вход</button>
-                <button class="tab-btn" data-tab="register">Регистрация</button>
-            </div>
-            
-            <!-- Вход водителя -->
-            <div id="driverLoginTab" class="tab-content active">
-                <form id="driverLoginForm">
-                    <div class="form-group">
-                        <label>Номер телефона:</label>
-                        <input type="tel" id="loginDriverPhone" placeholder="+7 (999) 123-45-67" required>
-                    </div>
-                    <button type="submit" class="btn-save">Войти в CRM</button>
-                </form>
-            </div>
-            
-            <!-- Регистрация водителя -->
-            <div id="driverRegisterTab" class="tab-content">
-                <form id="driverRegisterForm">
-                    <div class="form-group">
-                        <label>ФИО:</label>
-                        <input type="text" id="driverFullName" placeholder="Иванов Иван Иванович" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Тип услуги:</label>
-                        <select id="driverService" required>
-                            <option value="">Выберите услугу</option>
-                            <option value="water">💧 Водовозка</option>
-                            <option value="septic">🚽 Откачка септика</option>
-                            <option value="both">🚛 Обе услуги</option>
-                        </select>
-                    </div>
-                    <div class="form-group">
-                        <label>Номер телефона:</label>
-                        <input type="tel" id="driverPhone" placeholder="+7 (999) 123-45-67" required>
-                    </div>
-                    <div class="form-group">
-                        <label>Номер автомобиля:</label>
-                        <input type="text" id="driverCarNumber" placeholder="А123БК77" required>
-                    </div>
-                    <button type="submit" class="btn-save">Зарегистрироваться</button>
-                </form>
-            </div>
-        </div>
-    </div>
+
 
     <div class="overlay" id="overlay"></div>
 
