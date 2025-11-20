@@ -398,37 +398,57 @@ async function generateTimeSlots() {
     const timeSelect = document.getElementById('time');
     const selectedDate = document.getElementById('date').value;
     
-    timeSelect.innerHTML = '<option value="">Выберите время</option>';
+    if (!selectedDate) {
+        timeSelect.innerHTML = '<option value="">Выберите время</option>';
+        return;
+    }
+
+    // Показываем индикатор загрузки
+    timeSelect.innerHTML = '<option value="">⏳ Загрузка...</option>';
+    timeSelect.disabled = true;
     
-    if (!selectedDate) return;
-    
-    // Получаем занятые слоты на выбранную дату
-    const occupiedSlots = await getOccupiedTimeSlots(selectedDate);
-    
-    // Генерируем слоты с 8:00 до 20:00 каждые 30 минут
-    for (let hour = 8; hour <= 20; hour++) {
-        for (let minute = 0; minute < 60; minute += 30) {
-            if (hour === 20 && minute > 0) break; // Последний слот 20:00
-            
-            const timeString = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
-            
-            // Проверяем, не занят ли этот слот
-            if (!occupiedSlots.includes(timeString)) {
-                const option = document.createElement('option');
-                option.value = timeString;
-                option.textContent = timeString;
-                timeSelect.appendChild(option);
+    try {
+        // Параллельно генерируем слоты и получаем занятые
+        const [allSlots, occupiedSlots] = await Promise.all([
+            generateAllTimeSlots(),
+            getOccupiedTimeSlots(selectedDate)
+        ]);
+        
+        // Фильтруем доступные слоты
+        const availableSlots = allSlots.filter(slot => !occupiedSlots.includes(slot));
+        
+        // Быстро обновляем DOM
+        const options = ['<option value="">Выберите время</option>'];
+        
+        if (availableSlots.length > 0) {
+            availableSlots.forEach(slot => {
+                options.push(`<option value="${slot}">${slot}</option>`);
+            });
+        } else {
+            options.push('<option value="" disabled>На эту дату все время занято</option>');
+        }
+        
+        timeSelect.innerHTML = options.join('');
+        
+    } catch (error) {
+        console.error('Ошибка загрузки слотов:', error);
+        timeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
+    } finally {
+        timeSelect.disabled = false;
+    }
+}
+
+function generateAllTimeSlots() {
+    return new Promise(resolve => {
+        const slots = [];
+        for (let hour = 8; hour <= 20; hour++) {
+            for (let minute = 0; minute < 60; minute += 30) {
+                if (hour === 20 && minute > 0) break;
+                slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
             }
         }
-    }
-    
-    if (timeSelect.children.length === 1) {
-        const option = document.createElement('option');
-        option.value = '';
-        option.textContent = 'На эту дату все время занято';
-        option.disabled = true;
-        timeSelect.appendChild(option);
-    }
+        resolve(slots);
+    });
 }
 
 async function getOccupiedTimeSlots(date) {
