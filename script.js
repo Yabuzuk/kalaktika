@@ -77,23 +77,12 @@ function initializeApp() {
     // Подписываемся на изменения заказов
     subscribeToOrderUpdates();
     
-    // Инициализируем Яндекс карты с задержкой для мобильных
-    setTimeout(() => {
-        if (typeof ymaps !== 'undefined') {
-            ymaps.ready(() => {
-                try {
-                    initMaps();
-                    console.log('Автодополнение адресов активировано');
-                } catch (error) {
-                    console.error('Ошибка инициализации карт:', error);
-                    hideMapFeatures();
-                }
-            });
-        } else {
-            console.log('Яндекс.Карты API не загружен, работаем без карт');
-            hideMapFeatures();
-        }
-    }, 500);
+    // Карты загружаются лениво при открытии модального окна
+    // Проверяем, оптимально ли для мобильных
+    if (!lazyMaps.isMobileOptimal()) {
+        hideMapFeatures();
+        console.log('Карты отключены для медленного соединения');
+    }
 }
 
 function subscribeToOrderUpdates() {
@@ -160,6 +149,20 @@ function showOrderUpdateNotification(order) {
 async function loadCurrentOrder() {
     if (!currentUser) return;
     
+    // Проверяем кэш
+    const cacheKey = `current_order_${currentUser.id}`;
+    const cached = cache.get(cacheKey);
+    if (cached) {
+        if (cached.order) {
+            showCurrentOrder(cached.order);
+        } else {
+            hideCurrentOrder();
+        }
+        return;
+    }
+    
+    UILoader.showSkeleton('currentOrderDetails');
+    
     try {
         // Ищем текущий невыполненный заказ
         const { data: currentOrder, error } = await supabaseClient
@@ -174,6 +177,9 @@ async function loadCurrentOrder() {
         if (error && error.code !== 'PGRST116') {
             throw error;
         }
+
+        // Кэшируем результат
+        cache.set(cacheKey, { order: currentOrder });
 
         if (currentOrder) {
             showCurrentOrder(currentOrder);
@@ -426,6 +432,11 @@ async function generateTimeSlots() {
 }
 
 async function getOccupiedTimeSlots(date) {
+    // Проверяем кэш
+    const cacheKey = `time_slots_${date}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return cached;
+    
     try {
         // Получаем все заказы на выбранную дату
         const { data: orders, error } = await supabaseClient
@@ -437,7 +448,11 @@ async function getOccupiedTimeSlots(date) {
         if (error) throw error;
 
         // Возвращаем массив занятых временных слотов
-        return orders.map(order => order.delivery_time.slice(0, 5));
+        const slots = orders.map(order => order.delivery_time.slice(0, 5));
+        
+        // Кэшируем на 1 минуту
+        cache.set(cacheKey, slots);
+        return slots;
         
     } catch (error) {
         console.error('Ошибка получения занятых слотов:', error);
@@ -445,11 +460,26 @@ async function getOccupiedTimeSlots(date) {
     }
 }
 
-function openMapModal() {
+async function openMapModal() {
     document.getElementById('mapModal').style.display = 'block';
-    
-    // Предотвращаем скролл фона на мобильных
     document.body.style.overflow = 'hidden';
+    
+    // Ленивая загрузка карт
+    if (!lazyMaps.loaded) {
+        UILoader.showSpinner('Загрузка карт...');
+        
+        const loaded = await lazyMaps.load();
+        UILoader.hideSpinner();
+        
+        if (!loaded) {
+            alert('Не удалось загрузить карты');
+            closeMapModal();
+            return;
+        }
+        
+        // Инициализируем карту после загрузки
+        initMaps();
+    }
     
     setTimeout(() => {
         if (modalMap && modalMap.container) {
@@ -612,6 +642,9 @@ async function createOrder() {
         return;
     }
     
+    // Показываем спиннер
+    UILoader.showSpinner('Создание заказа...');
+    
     // Создаем объект заказа
     const order = {
         id: Date.now(),
@@ -629,11 +662,16 @@ async function createOrder() {
     // Сохраняем заказ в Supabase
     try {
         await saveOrder(order);
+        UILoader.hideSpinner();
         showOrderConfirmation(order);
+        
+        // Очищаем кэш
+        cache.clear();
         
         // Обновляем текущий заказ
         setTimeout(loadCurrentOrder, 1000);
     } catch (error) {
+        UILoader.hideSpinner();
         console.error('Ошибка создания заказа:', error);
     }
 }
