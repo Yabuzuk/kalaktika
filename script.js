@@ -19,7 +19,7 @@ async function checkAuthentication() {
     const userPhone = localStorage.getItem('userPhone');
     
     if (!userPhone) {
-        window.location.href = 'login.html';
+        window.location.href = 'role-select.html';
         return;
     }
     
@@ -1114,7 +1114,7 @@ function getServiceName(service) {
 function logout() {
     currentUser = null;
     localStorage.clear();
-    window.location.href = 'login.html';
+    window.location.href = 'role-select.html';
 }
 
 // PWA функциональность

@@ -156,7 +156,7 @@ async function initializeDriver() {
     if (!driverId) {
         console.log('Нет ID водителя, перенаправляем на вход');
         alert('Необходимо войти в систему');
-        window.location.href = 'index.html';
+        window.location.href = 'role-select.html';
         return;
     }
     
@@ -694,7 +694,7 @@ function logout() {
     }
     localStorage.removeItem('driverId');
     localStorage.removeItem('driverName');
-    window.location.href = 'driver-login.html';
+    window.location.href = 'role-select.html';
 }
 
 // Календарь
