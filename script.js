@@ -409,46 +409,53 @@ async function generateTimeSlots() {
     
     try {
         // Параллельно генерируем слоты и получаем занятые
-        const [allSlots, occupiedSlots] = await Promise.all([
-            generateAllTimeSlots(),
-            getOccupiedTimeSlots(selectedDate)
-        ]);
+        const allSlots = generateAllTimeSlots();
         
-        // Фильтруем доступные слоты
-        const availableSlots = allSlots.filter(slot => !occupiedSlots.includes(slot));
+        // Показываем слоты сразу, потом обновляем
+        timeSelect.innerHTML = '<option value="">Выберите время</option>' + 
+            allSlots.map(slot => `<option value="${slot}">${slot}</option>`).join('');
+        timeSelect.disabled = false;
         
-        // Быстро обновляем DOM
-        const options = ['<option value="">Выберите время</option>'];
+        // Асинхронно получаем занятые слоты
+        const occupiedSlots = await getOccupiedTimeSlots(selectedDate);
         
-        if (availableSlots.length > 0) {
-            availableSlots.forEach(slot => {
-                options.push(`<option value="${slot}">${slot}</option>`);
-            });
-        } else {
-            options.push('<option value="" disabled>На эту дату все время занято</option>');
+        // Обновляем слоты, убирая занятые
+        if (occupiedSlots.length > 0) {
+            const availableSlots = allSlots.filter(slot => !occupiedSlots.includes(slot));
+            
+            const options = ['<option value="">Выберите время</option>'];
+            
+            if (availableSlots.length > 0) {
+                availableSlots.forEach(slot => {
+                    options.push(`<option value="${slot}">${slot}</option>`);
+                });
+            } else {
+                options.push('<option value="" disabled>На эту дату все время занято</option>');
+            }
+            
+            timeSelect.innerHTML = options.join('');
         }
-        
-        timeSelect.innerHTML = options.join('');
+        // Если нет занятых слотов - оставляем все слоты
         
     } catch (error) {
         console.error('Ошибка загрузки слотов:', error);
-        timeSelect.innerHTML = '<option value="">Ошибка загрузки</option>';
-    } finally {
+        // При ошибке оставляем все слоты доступными
+        const allSlots = generateAllTimeSlots();
+        timeSelect.innerHTML = '<option value="">Выберите время</option>' + 
+            allSlots.map(slot => `<option value="${slot}">${slot}</option>`).join('');
         timeSelect.disabled = false;
     }
 }
 
 function generateAllTimeSlots() {
-    return new Promise(resolve => {
-        const slots = [];
-        for (let hour = 8; hour <= 20; hour++) {
-            for (let minute = 0; minute < 60; minute += 30) {
-                if (hour === 20 && minute > 0) break;
-                slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
-            }
+    const slots = [];
+    for (let hour = 8; hour <= 20; hour++) {
+        for (let minute = 0; minute < 60; minute += 30) {
+            if (hour === 20 && minute > 0) break;
+            slots.push(`${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`);
         }
-        resolve(slots);
-    });
+    }
+    return slots;
 }
 
 async function getOccupiedTimeSlots(date) {
@@ -457,26 +464,40 @@ async function getOccupiedTimeSlots(date) {
     const cached = cache.get(cacheKey);
     if (cached) return cached;
     
+    // Таймаут для медленного интернета
+    const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Timeout')), 5000)
+    );
+    
     try {
-        // Получаем все заказы на выбранную дату
-        const { data: orders, error } = await supabaseClient
+        // Оптимизированный запрос с таймаутом
+        const queryPromise = supabaseClient
             .from('orders')
             .select('delivery_time')
             .eq('delivery_date', date)
-            .in('status', ['pending', 'confirmed', 'in_progress']);
+            .in('status', ['pending', 'confirmed', 'in_progress'])
+            .limit(50); // Ограничиваем количество
+
+        const { data: orders, error } = await Promise.race([
+            queryPromise,
+            timeoutPromise
+        ]);
 
         if (error) throw error;
 
-        // Возвращаем массив занятых временных слотов
-        const slots = orders.map(order => order.delivery_time.slice(0, 5));
+        const slots = orders ? orders.map(order => order.delivery_time.slice(0, 5)) : [];
         
-        // Кэшируем на 1 минуту
+        // Кэшируем на 5 минут для медленного интернета
         cache.set(cacheKey, slots);
         return slots;
         
     } catch (error) {
-        console.error('Ошибка получения занятых слотов:', error);
-        return [];
+        console.error('Ошибка получения слотов:', error);
+        
+        // Фолбэк: возвращаем пустой массив
+        const fallback = [];
+        cache.set(cacheKey, fallback);
+        return fallback;
     }
 }
 
